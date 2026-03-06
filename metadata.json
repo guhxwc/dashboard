@@ -1,0 +1,5 @@
+{
+  "name": "SaaS Master Dashboard",
+  "description": "A comprehensive SaaS dashboard for tracking MRR, Churn, CAC, LTV, and managing partner payouts and profit sharing.",
+  "requestFramePermissions": []
+}
