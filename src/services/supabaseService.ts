@@ -42,54 +42,88 @@ const realSupabaseService = {
   },
 
   getCustomers: async (): Promise<Customer[]> => {
-    // 1. Fetch referrals to map user_id -> affiliate_ref
-    const { data: referrals } = await supabase.from('referrals').select('user_id, affiliate_ref');
-    const referralMap = new Map<string, string>();
+    // 1. Busca referrals: user_id -> affiliate_ref (código do afiliado)
+    const { data: referrals } = await supabase
+      .from('referrals')
+      .select('user_id, affiliate_ref, status');
+    
+    // Map: user_id -> { affiliate_ref, referral_status }
+    const referralMap = new Map<string, { ref: string; status: string }>();
     if (referrals) {
-      referrals.forEach((r: any) => referralMap.set(r.user_id, r.affiliate_ref));
+      referrals.forEach((r: any) =>
+        referralMap.set(r.user_id, { ref: r.affiliate_ref, status: r.status || 'pending' })
+      );
     }
 
-    // 2. Tenta buscar da view de usuários reais (se existir)
-    // Isso é útil se você já tem usuários no Supabase Auth e criou a view 'admin_users_view'
-    const { data: realUsers, error: realError } = await supabase
+    // 2. Busca profiles (tabela principal do Fitmind)
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, name, is_pro, subscription_status, created_at')
+      .order('created_at', { ascending: false });
+
+    if (profiles && profiles.length > 0) {
+      return profiles.map((p: any) => {
+        const referral = referralMap.get(p.id);
+        const isPro = p.is_pro || p.subscription_status === 'active';
+        return {
+          id: p.id,
+          name: p.name || 'Usuário',
+          email: '',
+          // source = código do afiliado (ex: "JOAO10") ou 'direct'
+          source: referral?.ref || 'direct',
+          status: isPro ? 'active' : (p.subscription_status === 'canceled' ? 'canceled' : 'past_due'),
+          created_at: p.created_at,
+          ltv: isPro ? 49.90 : 0,
+        };
+      }) as Customer[];
+    }
+
+    if (profileError) console.error('Error fetching profiles:', profileError);
+
+    // 3. Fallback: tenta admin_users_view
+    const { data: realUsers } = await supabase
       .from('admin_users_view')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (realUsers && realUsers.length > 0) {
-      return realUsers.map((user: any) => ({
-        id: user.id,
-        name: user.name || user.name_alt || user.email?.split('@')[0] || 'Usuário',
-        email: user.email || 'sem-email@exemplo.com',
-        status: 'active', // Assumindo ativo se está na base de usuários
-        created_at: user.created_at,
-        source: referralMap.get(user.id) || 'direct', // Use referral map
-        ltv: 0, // Não temos info de pagamento na tabela de auth
-      })) as Customer[];
+      return realUsers.map((user: any) => {
+        const referral = referralMap.get(user.id);
+        return {
+          id: user.id,
+          name: user.name || user.email?.split('@')[0] || 'Usuário',
+          email: user.email || '',
+          status: 'active' as const,
+          created_at: user.created_at,
+          source: referral?.ref || 'direct',
+          ltv: 0,
+        };
+      }) as Customer[];
     }
 
-    // 3. Se falhar ou não tiver view, tenta buscar de subscriptions (fallback para webhook do Stripe)
+    // 4. Último fallback: subscriptions
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching customers:', error);
-      // Se der erro em ambos, retorna array vazio
+      console.error('Error fetching subscriptions:', error);
       return [];
     }
 
-    // Map subscription data to Customer interface
-    return data.map((sub: any) => ({
-      id: sub.id,
-      name: sub.customer_name || 'Cliente',
-      email: sub.customer_email || 'email@exemplo.com',
-      status: sub.status,
-      created_at: sub.created_at,
-      source: sub.affiliate_id || referralMap.get(sub.user_id) || 'direct',
-      ltv: sub.plan_amount || 0, // Simplified LTV
-    })) as Customer[];
+    return (data || []).map((sub: any) => {
+      const referral = referralMap.get(sub.user_id);
+      return {
+        id: sub.id,
+        name: sub.customer_name || 'Cliente',
+        email: sub.customer_email || '',
+        status: sub.status,
+        created_at: sub.created_at,
+        source: referral?.ref || sub.affiliate_id || 'direct',
+        ltv: sub.plan_amount || 0,
+      };
+    }) as Customer[];
   },
 
   getDailyStats: async (): Promise<DailyStats[]> => {
