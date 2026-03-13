@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+const THEME_EVENT = 'theme-change';
+
 export function useTheme() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -7,12 +9,20 @@ export function useTheme() {
       if (savedTheme === 'dark' || savedTheme === 'light') {
         return savedTheme;
       }
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
+      return 'dark';
     }
-    return 'light';
+    return 'dark';
   });
+
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<'light' | 'dark'>;
+      setTheme(customEvent.detail);
+    };
+
+    window.addEventListener(THEME_EVENT, handleThemeChange);
+    return () => window.removeEventListener(THEME_EVENT, handleThemeChange);
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -22,7 +32,9 @@ export function useTheme() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: newTheme }));
   };
 
   return { theme, toggleTheme };

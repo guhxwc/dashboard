@@ -14,8 +14,23 @@ export interface Customer {
   email: string;
   status: 'active' | 'canceled' | 'past_due';
   created_at: string;
-  source: 'direct' | 'victor_hugo' | 'allan_stachuk';
+  source: string;
   ltv: number;
+  last_login?: string;
+  current_streak?: number;
+  plan?: 'monthly' | 'annual';
+}
+
+export interface DailyLog {
+  id: string;
+  user_id: string;
+  date: string;
+  protein_met: boolean;
+  water_met: boolean;
+  workout_met: boolean;
+  protein_grams?: number;
+  water_liters?: number;
+  workouts_count?: number;
 }
 
 export interface DailyStats {
@@ -23,6 +38,20 @@ export interface DailyStats {
   new_users: number;
   cancellations: number;
   active_users: number;
+  mrr: number;
+}
+
+export interface MonthlyStats {
+  month: string;
+  mrr: number;
+  new_users: number;
+  cancellations: number;
+}
+
+export interface WeeklyStats {
+  week: string;
+  new_users: number;
+  cancellations: number;
 }
 
 export interface FinancialSummary {
@@ -42,6 +71,7 @@ export interface Affiliate {
   pix_key?: string;
   status: 'active' | 'inactive';
   created_at: string;
+  total_paid?: number;
 }
 
 export interface PartnerPayout {
@@ -55,9 +85,12 @@ export interface PartnerPayout {
 
 export interface Metrics {
   mrr: number;
+  arr: number;
+  netNewMrr: number;
   churnRate: number;
   cac: number;
   ltv: number;
   activeUsers: number;
+  conversionRate: number;
   trafficSource: { name: string; value: number }[];
 }

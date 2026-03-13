@@ -7,9 +7,20 @@ import { ProfitSharing } from '@/pages/ProfitSharing';
 import { Metrics } from '@/pages/Metrics';
 import { UsersPage } from '@/pages/Users';
 import { AffiliatesPage } from '@/pages/Affiliates';
+import { Transactions } from '@/pages/Transactions';
+import { AppUsage } from '@/pages/AppUsage';
+import { Jarvis } from '@/pages/Jarvis';
 
 function App() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [usersFilter, setUsersFilter] = useState('all');
+
+  const handleTabChange = (tab: string, filter: string = 'all') => {
+    setActiveTab(tab);
+    if (tab === 'users') {
+      setUsersFilter(filter);
+    }
+  };
 
   useEffect(() => {
     // 1. Handle Supabase Auth redirect (hash with access_token)
@@ -37,10 +48,13 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview': return <Overview />;
+      case 'overview': return <Overview onTabChange={handleTabChange} />;
+      case 'jarvis': return <Jarvis />;
       case 'metrics': return <Metrics />;
-      case 'users': return <UsersPage />;
+      case 'users': return <UsersPage initialStatus={usersFilter} onTabChange={handleTabChange} />;
+      case 'app-usage': return <AppUsage />;
       case 'affiliates': return <AffiliatesPage />;
+      case 'transactions': return <Transactions />;
       case 'financials': return <Financials />;
       case 'profit-sharing': return <ProfitSharing />;
       default: return <Overview />;
@@ -48,7 +62,7 @@ function App() {
   };
 
   return (
-    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
       {renderContent()}
     </Layout>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { mockService } from '@/services/mockData';
+import { supabaseService } from '@/services/supabaseService';
 import { Transaction } from '@/types';
 import { formatCurrency, formatPercentage } from '@/lib/utils';
 import { Users, Star, ArrowRight } from 'lucide-react';
@@ -10,14 +11,19 @@ export function Payouts() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await mockService.getTransactions();
-      setTransactions(data);
-      setLoading(false);
+      try {
+        const data = await supabaseService.getTransactions();
+        setTransactions(data);
+      } catch (err) {
+        console.error("Error fetching transactions for payouts:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-96 dark:text-slate-400">Calculando comissões...</div>;
+  if (loading) return <div className="flex items-center justify-center h-96 dark:text-zinc-400">Calculando comissões...</div>;
 
   // Logic:
   // Victor Hugo (40%): Valor total a ser transferido para ele (Assuming 40% of ALL sales attributed to him)
@@ -64,27 +70,27 @@ export function Payouts() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Comissões de Parceiros</h1>
-        <p className="text-slate-500 dark:text-slate-400">Gestão de pagamentos de afiliados e parceiros.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Comissões de Parceiros</h1>
+        <p className="text-zinc-500 dark:text-zinc-400">Gestão de pagamentos de afiliados e parceiros.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Victor Hugo */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Users className="w-24 h-24 dark:text-slate-100" />
+            <Users className="w-24 h-24 dark:text-zinc-100" />
           </div>
           <div className="relative z-10">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Victor Hugo</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Parceiro (40%)</p>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Victor Hugo</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Parceiro (40%)</p>
             <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
               {formatCurrency(victorTotal)}
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
               {transactions.filter(t => t.affiliate_id === 'victor_hugo').length} vendas atribuídas
             </p>
           </div>
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <button className="w-full py-2 px-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors flex items-center justify-center gap-2">
               Ver Detalhes <ArrowRight className="w-4 h-4" />
             </button>
@@ -92,21 +98,21 @@ export function Payouts() {
         </div>
 
         {/* Allan Stachuk */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Users className="w-24 h-24 dark:text-slate-100" />
+            <Users className="w-24 h-24 dark:text-zinc-100" />
           </div>
           <div className="relative z-10">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Allan Stachuk</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Afiliado (40%)</p>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Allan Stachuk</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Afiliado (40%)</p>
             <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
               {formatCurrency(allanTotal)}
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
               {transactions.filter(t => t.affiliate_id === 'allan_stachuk').length} vendas atribuídas
             </p>
           </div>
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <button className="w-full py-2 px-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors flex items-center justify-center gap-2">
               Ver Detalhes <ArrowRight className="w-4 h-4" />
             </button>
@@ -114,7 +120,7 @@ export function Payouts() {
         </div>
 
         {/* Upsell VIP (Nutri) */}
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 dark:from-purple-900 dark:to-indigo-900 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden border border-transparent dark:border-slate-700">
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 dark:from-purple-900 dark:to-indigo-900 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden border border-transparent dark:border-zinc-800">
           <div className="absolute top-0 right-0 p-4 opacity-20">
             <Star className="w-24 h-24" />
           </div>
@@ -132,13 +138,13 @@ export function Payouts() {
       </div>
 
       {/* Detailed Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Detalhamento de Comissões</h3>
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+        <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <h3 className="font-semibold text-zinc-900 dark:text-white">Detalhamento de Comissões</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800/50">
+            <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
               <tr>
                 <th className="px-6 py-3">Parceiro</th>
                 <th className="px-6 py-3">Tipo</th>
@@ -148,29 +154,29 @@ export function Payouts() {
                 <th className="px-6 py-3 text-right">A Pagar</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              <tr className="bg-white dark:bg-slate-900 border-b border-slate-50 dark:border-slate-800">
-                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">Victor Hugo</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Parceiro Principal</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{transactions.filter(t => t.affiliate_id === 'victor_hugo').length}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{formatCurrency(transactions.filter(t => t.affiliate_id === 'victor_hugo').reduce((a, b) => a + b.amount, 0))}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">40%</td>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+                <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Victor Hugo</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Parceiro Principal</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.affiliate_id === 'victor_hugo').length}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{formatCurrency(transactions.filter(t => t.affiliate_id === 'victor_hugo').reduce((a, b) => a + b.amount, 0))}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">40%</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(victorTotal)}</td>
               </tr>
-              <tr className="bg-white dark:bg-slate-900 border-b border-slate-50 dark:border-slate-800">
-                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">Allan Stachuk</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Afiliado</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{transactions.filter(t => t.affiliate_id === 'allan_stachuk').length}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{formatCurrency(transactions.filter(t => t.affiliate_id === 'allan_stachuk').reduce((a, b) => a + b.amount, 0))}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">40%</td>
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+                <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Allan Stachuk</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Afiliado</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.affiliate_id === 'allan_stachuk').length}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{formatCurrency(transactions.filter(t => t.affiliate_id === 'allan_stachuk').reduce((a, b) => a + b.amount, 0))}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">40%</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(allanTotal)}</td>
               </tr>
-              <tr className="bg-white dark:bg-slate-900 border-b border-slate-50 dark:border-slate-800">
-                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">Nutri (Upsell)</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Especialista</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{transactions.filter(t => t.type === 'upsell_vip').length}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{formatCurrency(upsellTotal)}</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">30%</td>
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+                <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Nutri (Upsell)</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Especialista</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.type === 'upsell_vip').length}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{formatCurrency(upsellTotal)}</td>
+                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">30%</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(nutriShare)}</td>
               </tr>
             </tbody>

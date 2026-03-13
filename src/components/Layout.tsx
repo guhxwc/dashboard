@@ -1,5 +1,5 @@
 import { useState, ReactNode } from 'react';
-import { LayoutDashboard, Wallet, Users, PieChart, Menu, ChevronRight, BarChart3, LogOut, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, PieChart, Menu, ChevronRight, BarChart3, LogOut, Sun, Moon, CreditCard, Activity, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { isDemoMode, setDemoMode } from '@/services/supabaseService';
@@ -13,6 +13,7 @@ interface LayoutProps {
 
 export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [demoActive, setDemoActive] = useState(isDemoMode());
   const { theme, toggleTheme } = useTheme();
 
@@ -24,29 +25,38 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
 
   const menuItems = [
     { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'jarvis', label: 'J.A.R.V.I.S.', icon: Sparkles },
     { id: 'metrics', label: 'Métricas', icon: BarChart3 },
     { id: 'users', label: 'Base de Usuários', icon: Users },
+    { id: 'app-usage', label: 'Uso do App', icon: Activity },
     { id: 'affiliates', label: 'Área de Afiliados', icon: Users },
+    { id: 'transactions', label: 'Transações', icon: CreditCard },
     { id: 'financials', label: 'Financeiro', icon: Wallet },
     { id: 'profit-sharing', label: 'Divisão de Sócios', icon: PieChart },
   ];
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 transition-colors">
-      <div className="h-20 flex items-center px-8 border-b border-slate-100/50 dark:border-slate-800">
+  const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
+    <div className="flex flex-col h-full bg-white dark:bg-[#121212] transition-colors overflow-hidden">
+      <div className={cn("h-16 flex items-center border-b border-zinc-100/50 dark:border-zinc-800/50 transition-all duration-300", collapsed ? "justify-center px-0" : "px-6")}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none">
-            <span className="text-white font-bold text-xl">S</span>
+          <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-white flex items-center justify-center shrink-0">
+            <span className="text-white dark:text-zinc-900 font-bold text-lg">F</span>
           </div>
-          <div>
-            <h1 className="font-bold text-slate-900 dark:text-white text-lg tracking-tight">SaaS Master</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Dashboard Pro</p>
-          </div>
+          {!collapsed && (
+            <motion.div 
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              className="overflow-hidden whitespace-nowrap"
+            >
+              <h1 className="font-bold text-zinc-900 dark:text-white text-base tracking-tight">Fitmind Master</h1>
+            </motion.div>
+          )}
         </div>
       </div>
 
-      <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
-        <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 px-2">Menu Principal</div>
+      <nav className={cn("flex-1 py-6 space-y-1 overflow-y-auto overflow-x-hidden", collapsed ? "px-3" : "px-4")}>
+        {!collapsed && <div className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-4 px-3 whitespace-nowrap">Menu Principal</div>}
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -57,51 +67,63 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
                 onTabChange(item.id);
                 setIsSidebarOpen(false);
               }}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                "w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+                "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 group relative",
+                collapsed ? "justify-center p-3" : "justify-between px-3 py-2.5",
                 isActive
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+                  ? "text-zinc-900 dark:text-white"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
               )}
             >
-              <div className="flex items-center gap-3 relative z-10">
-                <Icon className={cn("w-5 h-5", isActive ? "text-white" : "text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors")} />
-                <span>{item.label}</span>
+              <div className={cn("flex items-center relative z-10", collapsed ? "justify-center" : "gap-3")}>
+                <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors")} />
+                {!collapsed && <span className="whitespace-nowrap text-[13px]">{item.label}</span>}
               </div>
               {isActive && (
                 <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-indigo-600 rounded-xl -z-0"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  layoutId={collapsed ? undefined : "activeTab"}
+                  className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg -z-0"
+                  transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
                 />
               )}
-              {!isActive && <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
             </button>
           );
         })}
       </nav>
 
-      <div className="p-6 border-t border-slate-100/50 dark:border-slate-800">
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
-          <LogOut className="w-5 h-5" />
-          <span>Sair</span>
+      <div className={cn("p-4 border-t border-zinc-100/50 dark:border-zinc-800/50", collapsed ? "flex flex-col items-center" : "p-4")}>
+        <button 
+          title={collapsed ? "Sair" : undefined}
+          className={cn(
+            "flex items-center rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors",
+            collapsed ? "justify-center p-3 w-auto" : "justify-start gap-3 px-3 py-2.5 w-full"
+          )}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!collapsed && <span className="text-[13px]">Sair</span>}
         </button>
         
-        <div className="mt-6 flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-          <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 border-2 border-white dark:border-slate-600 shadow-sm flex items-center justify-center overflow-hidden">
+        <div className={cn(
+          "mt-2 flex items-center rounded-xl overflow-hidden",
+          collapsed ? "justify-center p-2" : "gap-3 px-3 py-2"
+        )}>
+          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
              <img src="https://picsum.photos/seed/gustavo/200" alt="User" className="w-full h-full object-cover" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">Gustavo</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Sócio Admin</p>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-zinc-900 dark:text-white truncate">Gustavo</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">Admin</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 flex transition-colors duration-300">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0a0a0a] font-sans text-zinc-900 dark:text-zinc-100 flex transition-colors duration-300">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -110,7 +132,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-zinc-900/20 backdrop-blur-sm z-40 lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -118,32 +140,43 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
       {/* Mobile Sidebar */}
       <motion.aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 shadow-2xl lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-[#121212] shadow-2xl lg:hidden",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
         initial={false}
         animate={isSidebarOpen ? { x: 0 } : { x: "-100%" }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
       >
-        <SidebarContent />
+        <SidebarContent collapsed={false} />
       </motion.aside>
 
       {/* Desktop Sidebar (Static) */}
-      <aside className="hidden lg:block w-72 bg-white dark:bg-slate-900 border-r border-slate-200/60 dark:border-slate-800 h-screen sticky top-0 overflow-hidden shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-20 transition-colors">
-        <SidebarContent />
-      </aside>
+      <motion.aside 
+        initial={false}
+        animate={{ width: isCollapsed ? 72 : 256 }}
+        transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
+        className="hidden lg:block bg-white dark:bg-[#121212] border-r border-zinc-200/60 dark:border-zinc-800/50 h-screen sticky top-0 overflow-hidden z-20 transition-colors shrink-0"
+      >
+        <SidebarContent collapsed={isCollapsed} />
+      </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-auto h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors">
-        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30 transition-all">
+      <main className="flex-1 min-w-0 overflow-auto h-screen bg-[#F8FAFC] dark:bg-[#0a0a0a] transition-colors">
+        <header className="h-16 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/50 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30 transition-all">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="lg:hidden p-2 -ml-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 rounded-lg transition-colors"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white hidden md:block">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden lg:block p-2 -ml-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 rounded-lg transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 hidden md:block">
               {menuItems.find(i => i.id === activeTab)?.label}
             </h2>
           </div>
@@ -152,46 +185,42 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
             <div className="hidden md:flex items-center gap-2 mr-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
               >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               
-              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-2"></div>
 
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Modo Demo</span>
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Demo</span>
               <button
                 onClick={handleDemoToggle}
                 className={cn(
-                  "w-11 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900",
-                  demoActive ? "bg-indigo-600" : "bg-slate-200 dark:bg-slate-700"
+                  "w-9 h-5 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:focus:ring-offset-[#121212]",
+                  demoActive ? "bg-zinc-800 dark:bg-zinc-600" : "bg-zinc-200 dark:bg-zinc-800"
                 )}
               >
                 <div className={cn(
-                  "w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-transform duration-200",
-                  demoActive ? "translate-x-6" : "translate-x-1"
+                  "w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  demoActive ? "translate-x-4" : "translate-x-1"
                 )} />
               </button>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-full text-sm text-emerald-700 dark:text-emerald-400 font-medium">
-              <span className="relative flex h-2 w-2">
+            <div className="hidden md:flex items-center gap-2 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-md text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
+              <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
               </span>
               <span>Online</span>
             </div>
             
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2 hidden md:block"></div>
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-2 hidden md:block"></div>
 
             <div className="flex items-center gap-3 pl-2">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Gustavo</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Admin</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 p-0.5 border-2 border-indigo-50 dark:border-indigo-900 shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                <img src="https://picsum.photos/seed/gustavo/200" alt="User" className="w-full h-full rounded-full object-cover" />
+              <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+                <img src="https://picsum.photos/seed/gustavo/200" alt="User" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -202,7 +231,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
             key={activeTab}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           >
             {children}
           </motion.div>
