@@ -234,6 +234,7 @@ export const mockService = {
         cac,
         ltv,
         activeUsers,
+        totalUsers: activeUsers * 1.5,
         conversionRate: 15.5,
         trafficSource: [
           { name: 'Victor Hugo', value: Math.floor(285 * multiplier) },

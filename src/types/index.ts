@@ -12,7 +12,7 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
-  status: 'active' | 'canceled' | 'past_due';
+  status: 'active' | 'canceled' | 'past_due' | 'pending';
   created_at: string;
   source: string;
   ltv: number;
@@ -91,6 +91,7 @@ export interface Metrics {
   cac: number;
   ltv: number;
   activeUsers: number;
+  totalUsers: number;
   conversionRate: number;
   trafficSource: { name: string; value: number }[];
 }

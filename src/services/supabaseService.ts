@@ -65,14 +65,25 @@ const realSupabaseService = {
     if (profiles && profiles.length > 0) {
       return profiles.map((p: any) => {
         const referral = referralMap.get(p.id);
-        const isPro = p.is_pro || p.subscription_status === 'active';
+        const isPro = p.is_pro === true || p.subscription_status === 'active';
+        
+        let status: 'active' | 'canceled' | 'past_due' | 'pending' = 'pending';
+        if (isPro) status = 'active';
+        else if (p.subscription_status === 'canceled') status = 'canceled';
+        else if (p.subscription_status === 'past_due') status = 'past_due';
+        else if (p.subscription_status === 'pending') status = 'pending';
+        else if (p.created_at) {
+          // If not pro and not canceled/past_due, but has profile, maybe it's just a free user
+          // We'll call them pending if they haven't converted yet
+          status = 'pending';
+        }
+
         return {
           id: p.id,
           name: p.name || 'Usuário',
           email: '',
-          // source = código do afiliado (ex: "JOAO10") ou 'direct'
           source: referral?.ref || 'direct',
-          status: isPro ? 'active' : (p.subscription_status === 'canceled' ? 'canceled' : 'past_due'),
+          status,
           created_at: p.created_at,
           ltv: isPro ? 49.90 : 0,
           last_login: p.last_active_at || p.created_at,
@@ -92,14 +103,22 @@ const realSupabaseService = {
     if (realUsers && realUsers.length > 0) {
       return realUsers.map((user: any) => {
         const referral = referralMap.get(user.id);
+        const isPro = user.is_pro === true || user.subscription_status === 'active';
+        
+        let status: 'active' | 'canceled' | 'past_due' | 'pending' = 'pending';
+        if (isPro) status = 'active';
+        else if (user.subscription_status === 'canceled') status = 'canceled';
+        else if (user.subscription_status === 'past_due') status = 'past_due';
+        else status = 'pending';
+
         return {
           id: user.id,
           name: user.name || user.email?.split('@')[0] || 'Usuário',
           email: user.email || '',
-          status: 'active' as const,
+          status,
           created_at: user.created_at,
           source: referral?.ref || 'direct',
-          ltv: 0,
+          ltv: isPro ? 49.90 : 0,
           last_login: user.last_active_at || user.created_at,
           current_streak: user.current_streak || 0,
         };
@@ -190,19 +209,30 @@ const realSupabaseService = {
     const endDateIso = endDate.toISOString();
     
     // 1. Calculate baseline (users active before startDate)
-    const { count: activeBeforeCount } = await supabase
+    let currentActive = 0;
+    const { count: activeBeforeCount, error: activeBeforeError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .lt('created_at', startDateIso)
       .or('is_pro.eq.true,subscription_status.eq.active');
 
-    let currentActive = activeBeforeCount || 0;
+    if (!activeBeforeError) {
+      currentActive = activeBeforeCount || 0;
+    } else {
+      const { count: viewActiveBeforeCount } = await supabase
+        .from('admin_users_view')
+        .select('*', { count: 'exact', head: true })
+        .lt('created_at', startDateIso)
+        .or('is_pro.eq.true,subscription_status.eq.active');
+      currentActive = viewActiveBeforeCount || 0;
+    }
+
     let currentMrr = currentActive * 49.90; // Approximate baseline MRR
 
     // 2. Tenta buscar estatísticas da view de usuários reais no período
     const { data: realUsers } = await supabase
       .from('admin_users_view')
-      .select('created_at')
+      .select('created_at, is_pro, subscription_status')
       .gte('created_at', startDateIso)
       .lte('created_at', endDateIso);
 
@@ -217,12 +247,12 @@ const realSupabaseService = {
     const newUsersSource = (realUsers && realUsers.length > 0) ? realUsers : (subs || []);
 
     // Group by date
-    const statsMap = new Map<string, DailyStats>();
+    const statsMap = new Map<string, DailyStats & { new_active: number }>();
     
     // Initialize days
     for (let i = days; i >= 0; i--) {
       const date = format(subDays(endDate, i), 'yyyy-MM-dd');
-      statsMap.set(date, { date, new_users: 0, cancellations: 0, active_users: 0, mrr: 0 });
+      statsMap.set(date, { date, new_users: 0, cancellations: 0, active_users: 0, mrr: 0, new_active: 0 });
     }
 
     // Populate new users count
@@ -231,6 +261,12 @@ const realSupabaseService = {
       if (statsMap.has(date)) {
         const stat = statsMap.get(date)!;
         stat.new_users += 1;
+        
+        // Check if user is active
+        const isPro = item.is_pro === true || item.subscription_status === 'active' || item.status === 'active';
+        if (isPro) {
+          stat.new_active += 1;
+        }
       }
     });
 
@@ -247,9 +283,10 @@ const realSupabaseService = {
     const sortedStats = Array.from(statsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     
     return sortedStats.map(stat => {
-      currentActive += stat.new_users - stat.cancellations;
+      currentActive += stat.new_active - stat.cancellations;
       currentMrr = currentActive * 49.90;
-      return { ...stat, active_users: Math.max(0, currentActive), mrr: Math.max(0, currentMrr) };
+      const { new_active, ...rest } = stat;
+      return { ...rest, active_users: Math.max(0, currentActive), mrr: Math.max(0, currentMrr) };
     });
   },
 
@@ -289,14 +326,52 @@ const realSupabaseService = {
     const { data: affiliates } = await supabase.from('affiliates').select('code, name');
     
     // Tenta pegar contagem real de usuários da view/profiles
-    const { count: realUserCount } = await supabase
+    let realUserCount = 0;
+    let activeProfileCount = 0;
+
+    const { count: profilesCount } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    const { count: activeProfileCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .or('is_pro.eq.true,subscription_status.eq.active');
+    if (profilesCount && profilesCount > 0) {
+      realUserCount = profilesCount;
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .or('is_pro.eq.true,subscription_status.eq.active');
+        
+      if (!error) {
+        activeProfileCount = count || 0;
+      } else {
+        // Se deu erro (ex: coluna não existe), tenta admin_users_view
+        const { count: viewCount } = await supabase
+          .from('admin_users_view')
+          .select('*', { count: 'exact', head: true });
+          
+        if (viewCount && viewCount > 0) {
+          realUserCount = viewCount;
+          const { count } = await supabase
+            .from('admin_users_view')
+            .select('*', { count: 'exact', head: true })
+            .or('is_pro.eq.true,subscription_status.eq.active');
+          activeProfileCount = count || 0;
+        }
+      }
+    } else {
+      // Fallback to admin_users_view
+      const { count: viewCount } = await supabase
+        .from('admin_users_view')
+        .select('*', { count: 'exact', head: true });
+        
+      if (viewCount && viewCount > 0) {
+        realUserCount = viewCount;
+        const { count } = await supabase
+          .from('admin_users_view')
+          .select('*', { count: 'exact', head: true })
+          .or('is_pro.eq.true,subscription_status.eq.active');
+        activeProfileCount = count || 0;
+      }
+    }
 
     if (!transactions || !subscriptions) {
       return {
@@ -321,11 +396,22 @@ const realSupabaseService = {
       return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
     });
     
-    // Se não houver assinaturas mas houver perfis ativos, usamos os perfis para o MRR base
+    console.log("activeAtEnd debug:", {
+      activeAtEndLength: activeAtEnd.length,
+      activeProfileCount
+    });
+
+    // Se houver assinaturas, elas são a fonte mais confiável para MRR e usuários ativos
+    // Caso contrário, usamos os perfis marcados como pro
     const activeUsersCount = Math.max(activeAtEnd.length, activeProfileCount || 0);
-    const mrr = activeAtEnd.length > 0 
-      ? activeAtEnd.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0)
-      : (activeProfileCount || 0) * 49.90;
+    
+    // Calcula o MRR baseado na fonte que tem mais usuários ativos
+    let mrr = 0;
+    if (activeAtEnd.length >= (activeProfileCount || 0) && activeAtEnd.length > 0) {
+      mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0);
+    } else {
+      mrr = (activeProfileCount || 0) * 49.90;
+    }
 
     const arr = mrr * 12;
 

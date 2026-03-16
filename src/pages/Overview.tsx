@@ -266,15 +266,15 @@ export function Overview({ onTabChange }: { onTabChange?: (tab: string, filter?:
             <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <UserPlus className="w-4 h-4" />
-                  <span className="text-xs font-medium">Novos Assinantes</span>
+                  <Database className="w-4 h-4" />
+                  <span className="text-xs font-medium">Total de Usuários</span>
                 </div>
               </div>
               <div className="flex items-end justify-between">
                 <span className="text-xl font-bold text-zinc-900 dark:text-white">
-                  {dailyStats.length > 0 ? dailyStats[dailyStats.length - 1].new_users : 0}
+                  {metrics?.totalUsers?.toLocaleString() || '0'}
                 </span>
-                <span className="text-xs font-medium text-emerald-500">+8%</span>
+                <span className="text-xs font-medium text-zinc-500">Base total</span>
               </div>
             </div>
           </div>

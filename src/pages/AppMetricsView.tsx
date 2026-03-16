@@ -1,5 +1,5 @@
 import { useState, useMemo, ReactNode } from 'react';
-import { Customer } from '@/types';
+import { Customer, DailyLog } from '@/types';
 import { ArrowLeft, Info, Activity, Users, Target, Droplets, Dumbbell, Flame, TrendingUp, Calendar, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format, subDays } from 'date-fns';
@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 interface AppMetricsViewProps {
   onBack: () => void;
   customers: Customer[];
+  dailyLogs?: DailyLog[];
+  usingRealData?: boolean;
 }
 
 const appMetricsDictionary: Record<string, { title: string; meaning: string; importance: string; howToUse: string }> = {
@@ -61,45 +63,75 @@ const appMetricsDictionary: Record<string, { title: string; meaning: string; imp
   }
 };
 
-export function AppMetricsView({ onBack, customers }: AppMetricsViewProps) {
+export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealData = false }: AppMetricsViewProps) {
   const [selectedMetricInfo, setSelectedMetricInfo] = useState<{ title: string; meaning: string; importance: string; howToUse: string } | null>(null);
 
-  // Generate deterministic mock historical data for the charts
+  // Generate historical data for the charts (real or mock)
   const historicalData = useMemo(() => {
     const data = [];
     for (let i = 30; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'dd/MM', { locale: ptBR });
+      const isoDateStr = date.toISOString().split('T')[0];
       
-      // Base values that grow slightly over time
-      const baseUsers = Math.floor(customers.length * 0.6) + Math.floor(i * 0.5);
-      const dau = Math.floor(baseUsers * (0.3 + Math.random() * 0.2));
-      
-      data.push({
-        date: dateStr,
-        dau,
-        protein: Math.floor(dau * (0.6 + Math.random() * 0.2)),
-        water: Math.floor(dau * (0.7 + Math.random() * 0.2)),
-        workout: Math.floor(dau * (0.4 + Math.random() * 0.2)),
-      });
+      if (usingRealData) {
+        // Filter logs for this specific date
+        const logsForDate = dailyLogs.filter(log => log.date === isoDateStr);
+        
+        // Calculate metrics based on real logs
+        const dau = logsForDate.length;
+        const protein = logsForDate.filter(log => log.protein_met).length;
+        const water = logsForDate.filter(log => log.water_met).length;
+        const workout = logsForDate.filter(log => log.workout_met).length;
+
+        data.push({
+          date: dateStr,
+          dau,
+          protein,
+          water,
+          workout,
+        });
+      } else {
+        // Base values that grow slightly over time
+        const baseUsers = Math.floor(customers.length * 0.6) + Math.floor(i * 0.5);
+        const dau = Math.floor(baseUsers * (0.3 + Math.random() * 0.2));
+        
+        data.push({
+          date: dateStr,
+          dau,
+          protein: Math.floor(dau * (0.6 + Math.random() * 0.2)),
+          water: Math.floor(dau * (0.7 + Math.random() * 0.2)),
+          workout: Math.floor(dau * (0.4 + Math.random() * 0.2)),
+        });
+      }
     }
     return data;
-  }, [customers.length]);
+  }, [customers.length, dailyLogs, usingRealData]);
 
   // Calculate overall metrics
   const activeUsers = customers.length;
   const dau = historicalData[historicalData.length - 1].dau;
-  const mau = Math.floor(activeUsers * 0.85); // Mock MAU
+  
+  // Real MAU calculation if using real data
+  let mau = 0;
+  if (usingRealData) {
+    const uniqueUsersLast30Days = new Set(dailyLogs.map(log => log.user_id));
+    mau = uniqueUsersLast30Days.size;
+  } else {
+    mau = Math.floor(activeUsers * 0.85); // Mock MAU
+  }
+
   const stickiness = mau > 0 ? Math.round((dau / mau) * 100) : 0;
   const usageRate = activeUsers > 0 ? Math.round((dau / activeUsers) * 100) : 0;
   
-  const avgProtein = Math.round((historicalData.reduce((acc, curr) => acc + curr.protein, 0) / historicalData.reduce((acc, curr) => acc + curr.dau, 0)) * 100) || 0;
-  const avgWater = Math.round((historicalData.reduce((acc, curr) => acc + curr.water, 0) / historicalData.reduce((acc, curr) => acc + curr.dau, 0)) * 100) || 0;
-  const avgWorkout = Math.round((historicalData.reduce((acc, curr) => acc + curr.workout, 0) / historicalData.reduce((acc, curr) => acc + curr.dau, 0)) * 100) || 0;
+  const totalDau = historicalData.reduce((acc, curr) => acc + curr.dau, 0);
+  const avgProtein = totalDau > 0 ? Math.round((historicalData.reduce((acc, curr) => acc + curr.protein, 0) / totalDau) * 100) : 0;
+  const avgWater = totalDau > 0 ? Math.round((historicalData.reduce((acc, curr) => acc + curr.water, 0) / totalDau) * 100) : 0;
+  const avgWorkout = totalDau > 0 ? Math.round((historicalData.reduce((acc, curr) => acc + curr.workout, 0) / totalDau) * 100) : 0;
   
   const goalCompletionRate = Math.round((avgProtein + avgWater + avgWorkout) / 3);
-  const consistencyRate = Math.round(goalCompletionRate * 0.9); // Mock consistency
-  const adherenceRate = Math.round(usageRate * 0.8); // Mock adherence
+  const consistencyRate = Math.round(goalCompletionRate * 0.9); // Mock consistency or derived
+  const adherenceRate = Math.round(usageRate * 0.8); // Mock adherence or derived
   
   const avgStreak = Math.round(customers.reduce((acc, curr) => acc + (curr.current_streak || 0), 0) / (customers.length || 1));
 

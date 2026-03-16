@@ -35,8 +35,10 @@ export function AppUsage() {
         setCustomers(customersData.filter(c => c.status === 'active'));
 
         if (!isDemo) {
-          const today = new Date().toISOString().split('T')[0];
-          const logs = await supabaseService.getDailyLogs(today);
+          const today = new Date();
+          const thirtyDaysAgo = subDays(today, 30).toISOString().split('T')[0];
+          const todayStr = today.toISOString().split('T')[0];
+          const logs = await supabaseService.getLogsByDateRange(thirtyDaysAgo, todayStr);
           setDailyLogs(logs as DailyLog[]);
         }
       } catch (err) {
@@ -54,10 +56,15 @@ export function AppUsage() {
     return customers.map((customer, index) => {
       if (usingRealData) {
         // Use real data from Supabase
-        const log = dailyLogs.find(l => l.user_id === customer.id);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const log = dailyLogs.find(l => l.user_id === customer.id && l.date === todayStr);
+        
+        // If they have a log today, they are active today
+        const lastActive = log ? new Date().toISOString() : (customer.last_login || customer.created_at);
+
         return {
           customer,
-          lastActive: customer.last_login || customer.created_at,
+          lastActive,
           proteinGoal: log?.protein_met || false,
           waterGoal: log?.water_met || false,
           workoutCompleted: log?.workout_met || false,
@@ -138,6 +145,8 @@ export function AppUsage() {
       <AppMetricsView 
         onBack={() => setView('list')} 
         customers={customers}
+        dailyLogs={dailyLogs}
+        usingRealData={usingRealData}
       />
     );
   }
@@ -150,6 +159,8 @@ export function AppUsage() {
           setSelectedUser(null);
         }} 
         customer={selectedUser} 
+        dailyLogs={dailyLogs}
+        usingRealData={usingRealData}
       />
     );
   }

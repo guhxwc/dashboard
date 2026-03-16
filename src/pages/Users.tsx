@@ -198,7 +198,8 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
               <option value="all">Status: Todos</option>
               <option value="active">Status: Ativos</option>
               <option value="canceled">Status: Cancelados</option>
-              <option value="past_due">Status: Pendentes</option>
+              <option value="past_due">Status: Atrasados (Past Due)</option>
+              <option value="pending">Status: Pendentes</option>
             </select>
 
             <select 
@@ -269,13 +270,16 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     <span className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1
                       ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                         customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
+                        customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
                         'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                       {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
                       {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
                       {customer.status === 'past_due' && <Clock className="w-3 h-3" />}
+                      {customer.status === 'pending' && <Clock className="w-3 h-3" />}
                       <span className="capitalize">{
                         customer.status === 'active' ? 'Ativo' :
-                        customer.status === 'canceled' ? 'Cancelado' : 'Pendente'
+                        customer.status === 'canceled' ? 'Cancelado' : 
+                        customer.status === 'past_due' ? 'Atrasado' : 'Pendente'
                       }</span>
                     </span>
                   </td>
@@ -369,10 +373,13 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`w-2.5 h-2.5 rounded-full ${
                         selectedCustomer.status === 'active' ? 'bg-emerald-500' : 
-                        selectedCustomer.status === 'canceled' ? 'bg-zinc-400' : 'bg-amber-500'
+                        selectedCustomer.status === 'canceled' ? 'bg-zinc-400' : 
+                        selectedCustomer.status === 'past_due' ? 'bg-rose-500' : 'bg-amber-500'
                       }`}></span>
                       <span className="text-sm font-medium text-zinc-900 dark:text-white capitalize">
-                        {selectedCustomer.status === 'active' ? 'Ativo' : selectedCustomer.status === 'canceled' ? 'Cancelado' : 'Pendente'}
+                        {selectedCustomer.status === 'active' ? 'Ativo' : 
+                         selectedCustomer.status === 'canceled' ? 'Cancelado' : 
+                         selectedCustomer.status === 'past_due' ? 'Atrasado' : 'Pendente'}
                       </span>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo, ReactNode } from 'react';
-import { Customer } from '@/types';
+import { Customer, DailyLog } from '@/types';
 import { ArrowLeft, Info, Target, Droplets, Dumbbell, Flame, Calendar, TrendingUp, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { format, subDays } from 'date-fns';
@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 interface UserMetricsViewProps {
   onBack: () => void;
   customer: Customer;
+  dailyLogs?: DailyLog[];
+  usingRealData?: boolean;
 }
 
 const userMetricsDictionary: Record<string, { title: string; meaning: string; importance: string; howToUse: string }> = {
@@ -37,10 +39,10 @@ const userMetricsDictionary: Record<string, { title: string; meaning: string; im
   }
 };
 
-export function UserMetricsView({ onBack, customer }: UserMetricsViewProps) {
+export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealData = false }: UserMetricsViewProps) {
   const [selectedMetricInfo, setSelectedMetricInfo] = useState<{ title: string; meaning: string; importance: string; howToUse: string } | null>(null);
 
-  // Generate deterministic mock historical data for the specific user
+  // Generate historical data for the specific user (real or mock)
   const historicalData = useMemo(() => {
     const data = [];
     const seed = customer.id.length;
@@ -49,32 +51,56 @@ export function UserMetricsView({ onBack, customer }: UserMetricsViewProps) {
     for (let i = 30; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'dd/MM', { locale: ptBR });
+      const isoDateStr = date.toISOString().split('T')[0];
       
-      // Deterministic randomness based on user ID and day
-      const daySeed = seed + i;
-      const isActive = (daySeed % 10) < 6; // 60% chance of being active
-      
-      const protein = isActive && (daySeed % 10) < 5 ? 1 : 0;
-      const water = isActive && (daySeed % 10) < 7 ? 1 : 0;
-      const workout = isActive && (daySeed % 10) < 4 ? 1 : 0;
-      
-      if (protein || water || workout) {
-        currentStreak++;
+      if (usingRealData) {
+        const log = dailyLogs.find(l => l.user_id === customer.id && l.date === isoDateStr);
+        
+        const protein = log?.protein_met ? 1 : 0;
+        const water = log?.water_met ? 1 : 0;
+        const workout = log?.workout_met ? 1 : 0;
+        
+        if (protein || water || workout) {
+          currentStreak++;
+        } else {
+          currentStreak = 0;
+        }
+        
+        data.push({
+          date: dateStr,
+          protein,
+          water,
+          workout,
+          streak: currentStreak,
+          score: (protein + water + workout) * 33.33 // 0, 33, 66, 100
+        });
       } else {
-        currentStreak = 0;
+        // Deterministic randomness based on user ID and day
+        const daySeed = seed + i;
+        const isActive = (daySeed % 10) < 6; // 60% chance of being active
+        
+        const protein = isActive && (daySeed % 10) < 5 ? 1 : 0;
+        const water = isActive && (daySeed % 10) < 7 ? 1 : 0;
+        const workout = isActive && (daySeed % 10) < 4 ? 1 : 0;
+        
+        if (protein || water || workout) {
+          currentStreak++;
+        } else {
+          currentStreak = 0;
+        }
+        
+        data.push({
+          date: dateStr,
+          protein,
+          water,
+          workout,
+          streak: currentStreak,
+          score: (protein + water + workout) * 33.33 // 0, 33, 66, 100
+        });
       }
-      
-      data.push({
-        date: dateStr,
-        protein,
-        water,
-        workout,
-        streak: currentStreak,
-        score: (protein + water + workout) * 33.33 // 0, 33, 66, 100
-      });
     }
     return data;
-  }, [customer.id]);
+  }, [customer.id, dailyLogs, usingRealData]);
 
   const totalActiveDays = historicalData.filter(d => d.protein || d.water || d.workout).length;
   const consistency = Math.round((totalActiveDays / 30) * 100);
