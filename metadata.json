@@ -1,5 +1,5 @@
 {
-  "name": "SaaS Master Dashboard",
-  "description": "A comprehensive SaaS dashboard for tracking MRR, Churn, CAC, LTV, and managing partner payouts and profit sharing.",
+  "name": "FitMind Dashboard",
+  "description": "Painel administrativo do FitMind para acompanhamento de MRR, Churn, CAC, LTV e gestão de afiliados e divisão de lucros.",
   "requestFramePermissions": []
 }

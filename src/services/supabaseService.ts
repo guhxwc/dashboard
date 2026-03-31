@@ -48,7 +48,6 @@ const realSupabaseService = {
       .from('referrals')
       .select('user_id, affiliate_ref, status');
     
-    // Map: user_id -> { affiliate_ref, referral_status }
     const referralMap = new Map<string, { ref: string; status: string }>();
     if (referrals) {
       referrals.forEach((r: any) =>
@@ -56,98 +55,138 @@ const realSupabaseService = {
       );
     }
 
-    // 2. Busca profiles (tabela principal do Fitmind)
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, name, is_pro, subscription_status, created_at, last_active_at, current_streak')
-      .order('created_at', { ascending: false });
+    // 2. Busca de múltiplas fontes
+    const [profilesRes, usersViewRes, subsRes] = await Promise.all([
+      supabase.from('profiles').select('*'),
+      supabase.from('fitmind_users_view').select('*'),
+      supabase.from('subscriptions').select('*')
+    ]);
 
-    if (profiles && profiles.length > 0) {
-      return profiles.map((p: any) => {
-        const referral = referralMap.get(p.id);
-        const isPro = p.is_pro === true || p.subscription_status === 'active';
+    console.log('Dashboard Data Sync:', {
+      profiles: profilesRes.data?.length || 0,
+      auth_users_view: usersViewRes.data?.length || 0,
+      subscriptions: subsRes.data?.length || 0
+    });
+
+    const allUsersMap = new Map<string, any>();
+    const emailToIdMap = new Map<string, string>();
+
+    // Função auxiliar para mesclar sem sobrescrever com nulos
+    const mergeData = (target: any, source: any) => {
+      const result = { ...target };
+      Object.keys(source).forEach(key => {
+        if (source[key] !== null && source[key] !== undefined && source[key] !== '') {
+          result[key] = source[key];
+        }
+      });
+      return result;
+    };
+
+    // 1. Processa usuários da View (Fonte oficial do auth.users)
+    if (usersViewRes.data && usersViewRes.data.length > 0) {
+      usersViewRes.data.forEach((u: any) => {
+        const metadata = u.raw_user_meta_data || {};
+        const metadataName = metadata.full_name || metadata.name || metadata.display_name;
         
-        let status: 'active' | 'canceled' | 'past_due' | 'pending' = 'pending';
-        if (isPro) status = 'active';
-        else if (p.subscription_status === 'canceled') status = 'canceled';
-        else if (p.subscription_status === 'past_due') status = 'past_due';
-        else if (p.subscription_status === 'pending') status = 'pending';
-        else if (p.created_at) {
-          // If not pro and not canceled/past_due, but has profile, maybe it's just a free user
-          // We'll call them pending if they haven't converted yet
-          status = 'pending';
+        allUsersMap.set(u.id, { 
+          ...u, 
+          name: metadataName,
+          source_table: 'auth_users' 
+        });
+        
+        if (u.email) {
+          emailToIdMap.set(u.email.toLowerCase(), u.id);
+        }
+      });
+    }
+
+    // 2. Processa profiles (Dados extras do FitMind)
+    if (profilesRes.data) {
+      profilesRes.data.forEach((p: any) => {
+        const existing = allUsersMap.get(p.id);
+        allUsersMap.set(p.id, mergeData(existing || {}, { ...p, source_table: existing ? 'merged' : 'profiles' }));
+        
+        if (p.email) {
+          emailToIdMap.set(p.email.toLowerCase(), p.id);
+        }
+      });
+    }
+
+    // 3. Processa subscriptions (Dados de pagamento)
+    if (subsRes.data) {
+      subsRes.data.forEach((s: any) => {
+        // Tenta encontrar o ID do usuário: 
+        // 1. Pelo user_id da assinatura
+        // 2. Pelo email (caso o user_id esteja nulo na tabela de assinaturas)
+        // 3. Usa o stripe_customer_id como último recurso (cria um novo registro se não achar o usuário)
+        let userId = s.user_id;
+        
+        if (!userId && s.customer_email) {
+          userId = emailToIdMap.get(s.customer_email.toLowerCase());
+        }
+        
+        if (!userId) {
+          userId = s.stripe_customer_id || s.id; // Fallback final
         }
 
-        return {
-          id: p.id,
-          name: p.name || 'Usuário',
-          email: '',
-          source: referral?.ref || 'direct',
-          status,
-          created_at: p.created_at,
-          ltv: isPro ? 49.90 : 0,
-          last_login: p.last_active_at || p.created_at,
-          current_streak: p.current_streak || 0,
-        };
-      }) as Customer[];
-    }
-
-    if (profileError) console.error('Error fetching profiles:', profileError);
-
-    // 3. Fallback: tenta admin_users_view
-    const { data: realUsers } = await supabase
-      .from('admin_users_view')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (realUsers && realUsers.length > 0) {
-      return realUsers.map((user: any) => {
-        const referral = referralMap.get(user.id);
-        const isPro = user.is_pro === true || user.subscription_status === 'active';
+        if (!userId) return;
         
-        let status: 'active' | 'canceled' | 'past_due' | 'pending' = 'pending';
-        if (isPro) status = 'active';
-        else if (user.subscription_status === 'canceled') status = 'canceled';
-        else if (user.subscription_status === 'past_due') status = 'past_due';
-        else status = 'pending';
-
-        return {
-          id: user.id,
-          name: user.name || user.email?.split('@')[0] || 'Usuário',
-          email: user.email || '',
-          status,
-          created_at: user.created_at,
-          source: referral?.ref || 'direct',
-          ltv: isPro ? 49.90 : 0,
-          last_login: user.last_active_at || user.created_at,
-          current_streak: user.current_streak || 0,
+        const existing = allUsersMap.get(userId);
+        const subData = {
+          id: userId,
+          name: s.customer_name,
+          email: s.customer_email,
+          subscription_status: s.status,
+          stripe_customer_id: s.stripe_customer_id,
+          plan_amount: s.plan_amount,
+          created_at: s.created_at,
+          affiliate_id: s.affiliate_id,
+          has_subscription: true
         };
-      }) as Customer[];
+
+        allUsersMap.set(userId, mergeData(existing || {}, subData));
+      });
     }
 
-    // 4. Último fallback: subscriptions
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching subscriptions:', error);
+    if (allUsersMap.size === 0) {
+      console.warn('Nenhum usuário encontrado. Verifique as tabelas no Supabase.');
       return [];
     }
 
-    return (data || []).map((sub: any) => {
-      const referral = referralMap.get(sub.user_id);
+    const finalUsers = Array.from(allUsersMap.values());
+
+    return finalUsers.map((p: any) => {
+      const userId = p.id || p.user_id;
+      const referral = referralMap.get(userId) || (p.affiliate_id ? { ref: p.affiliate_id, status: 'active' } : null);
+      const isPro = p.is_pro === true || p.subscription_status === 'active' || p.status === 'active';
+      const isTester = p.is_tester === true;
+      
+      let status: 'active' | 'canceled' | 'past_due' | 'pending' | 'tester' = 'pending';
+      if (isTester) status = 'tester';
+      else if (isPro) status = 'active';
+      else if (p.subscription_status === 'canceled' || p.status === 'canceled') status = 'canceled';
+      else if (p.subscription_status === 'past_due' || p.status === 'past_due') status = 'past_due';
+      else status = 'pending';
+
+      // Fallback robusto para Nome e Email
+      const finalEmail = p.email || p.customer_email || '';
+      const finalName = p.name || p.customer_name || (finalEmail ? finalEmail.split('@')[0] : 'Usuário');
+
       return {
-        id: sub.id,
-        name: sub.customer_name || 'Cliente',
-        email: sub.customer_email || '',
-        status: sub.status,
-        created_at: sub.created_at,
-        source: referral?.ref || sub.affiliate_id || 'direct',
-        ltv: sub.plan_amount || 0,
+        id: userId,
+        name: finalName,
+        email: finalEmail,
+        source: referral?.ref || 'direct',
+        status,
+        created_at: p.created_at,
+        ltv: status === 'tester' ? 0 : (isPro ? (p.plan_amount || 49.90) : 0),
+        last_login: p.last_active_at || p.created_at,
+        current_streak: p.current_streak || 0,
+        stripe_customer_id: p.stripe_customer_id,
       };
     }) as Customer[];
+
+    return [];
   },
 
   getDailyLogs: async (date: string) => {
@@ -208,43 +247,44 @@ const realSupabaseService = {
     const startDateIso = subDays(endDate, days).toISOString();
     const endDateIso = endDate.toISOString();
     
-    // 1. Calculate baseline (users active before startDate)
-    let currentActive = 0;
-    const { count: activeBeforeCount, error: activeBeforeError } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .lt('created_at', startDateIso)
-      .or('is_pro.eq.true,subscription_status.eq.active');
-
-    if (!activeBeforeError) {
-      currentActive = activeBeforeCount || 0;
-    } else {
-      const { count: viewActiveBeforeCount } = await supabase
-        .from('admin_users_view')
-        .select('*', { count: 'exact', head: true })
-        .lt('created_at', startDateIso)
-        .or('is_pro.eq.true,subscription_status.eq.active');
-      currentActive = viewActiveBeforeCount || 0;
-    }
-
+    // 1. Get all customers to accurately filter testers and calculate baseline
+    const customers = await supabaseService.getCustomers();
+    
+    // Calculate baseline (users active before startDate)
+    let currentActive = customers.filter(c => c.status === 'active' && new Date(c.created_at) < new Date(startDateIso)).length;
     let currentMrr = currentActive * 49.90; // Approximate baseline MRR
 
     // 2. Tenta buscar estatísticas da view de usuários reais no período
     const { data: realUsers } = await supabase
       .from('admin_users_view')
-      .select('created_at, is_pro, subscription_status')
+      .select('id, created_at, is_pro, subscription_status')
       .gte('created_at', startDateIso)
       .lte('created_at', endDateIso);
 
     // 3. Busca também de subscriptions para ter dados de cancelamento no período
+    // Buscamos tanto as criadas no período quanto as canceladas no período
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('created_at, status')
-      .gte('created_at', startDateIso)
+      .select('user_id, created_at, updated_at, status, plan_amount')
+      .or(`created_at.gte.${startDateIso},updated_at.gte.${startDateIso}`)
       .lte('created_at', endDateIso);
 
+    // 4. Busca revogações manuais no admin_actions_log
+    let manualRevocations: any[] = [];
+    try {
+      const { data: logs } = await supabase
+        .from('admin_actions_log' as any)
+        .select('user_id, created_at')
+        .eq('action', 'revoke')
+        .gte('created_at', startDateIso)
+        .lte('created_at', endDateIso);
+      manualRevocations = logs || [];
+    } catch (e) {
+      console.warn("Could not fetch admin_actions_log for daily stats", e);
+    }
+
     // Decide qual fonte usar para "Novos Usuários"
-    const newUsersSource = (realUsers && realUsers.length > 0) ? realUsers : (subs || []);
+    const newUsersSource = (realUsers && realUsers.length > 0) ? realUsers : (subs?.filter(s => s.created_at >= startDateIso) || []);
 
     // Group by date
     const statsMap = new Map<string, DailyStats & { new_active: number }>();
@@ -257,6 +297,10 @@ const realSupabaseService = {
 
     // Populate new users count
     newUsersSource.forEach((item: any) => {
+      // Exclude testers and admins (admins are not in the customers list)
+      const customer = customers.find(c => c.id === (item.id || item.user_id));
+      if (!customer || customer.status === 'tester') return;
+
       const date = format(new Date(item.created_at), 'yyyy-MM-dd');
       if (statsMap.has(date)) {
         const stat = statsMap.get(date)!;
@@ -270,10 +314,29 @@ const realSupabaseService = {
       }
     });
 
-    // Populate cancellations
+    // Populate cancellations from subscriptions
     subs?.forEach((sub: any) => {
-      const date = format(new Date(sub.created_at), 'yyyy-MM-dd');
-      if (statsMap.has(date) && sub.status === 'canceled') {
+      // Exclude testers and admins
+      const customer = customers.find(c => c.id === sub.user_id);
+      if (!customer || customer.status === 'tester') return;
+
+      if (sub.status === 'canceled' && sub.updated_at) {
+        const date = format(new Date(sub.updated_at), 'yyyy-MM-dd');
+        if (statsMap.has(date)) {
+          const stat = statsMap.get(date)!;
+          stat.cancellations += 1;
+        }
+      }
+    });
+
+    // Populate manual cancellations
+    manualRevocations.forEach((log: any) => {
+      // Exclude testers and admins
+      const customer = customers.find(c => c.id === log.user_id);
+      if (!customer || customer.status === 'tester') return;
+
+      const date = format(new Date(log.created_at), 'yyyy-MM-dd');
+      if (statsMap.has(date)) {
         const stat = statsMap.get(date)!;
         stat.cancellations += 1;
       }
@@ -282,9 +345,31 @@ const realSupabaseService = {
     // Calculate active users and MRR with baseline
     const sortedStats = Array.from(statsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     
+    // Track daily MRR changes more precisely if possible
+    const dailyMrrChanges = new Map<string, number>();
+    subs?.forEach((sub: any) => {
+      // Exclude testers and admins
+      const customer = customers.find(c => c.id === sub.user_id);
+      if (!customer || customer.status === 'tester') return;
+
+      const createdDate = format(new Date(sub.created_at), 'yyyy-MM-dd');
+      if (statsMap.has(createdDate)) {
+        dailyMrrChanges.set(createdDate, (dailyMrrChanges.get(createdDate) || 0) + (sub.plan_amount || 49.90));
+      }
+      if (sub.status === 'canceled' && sub.updated_at) {
+        const canceledDate = format(new Date(sub.updated_at), 'yyyy-MM-dd');
+        if (statsMap.has(canceledDate)) {
+          dailyMrrChanges.set(canceledDate, (dailyMrrChanges.get(canceledDate) || 0) - (sub.plan_amount || 49.90));
+        }
+      }
+    });
+
     return sortedStats.map(stat => {
       currentActive += stat.new_active - stat.cancellations;
-      currentMrr = currentActive * 49.90;
+      // Use the daily changes if we have them, otherwise fallback to average
+      const mrrChange = dailyMrrChanges.get(stat.date) || (stat.new_active - stat.cancellations) * 49.90;
+      currentMrr += mrrChange;
+      
       const { new_active, ...rest } = stat;
       return { ...rest, active_users: Math.max(0, currentActive), mrr: Math.max(0, currentMrr) };
     });
@@ -321,57 +406,14 @@ const realSupabaseService = {
     const endDateIso = endDate.toISOString();
 
     // Fetch aggregates
-    const { data: transactions } = await supabase.from('transactions').select('amount, affiliate_id, created_at').gte('created_at', startDateIso).lte('created_at', endDateIso);
-    const { data: subscriptions } = await supabase.from('subscriptions').select('status, plan_amount, created_at, updated_at');
+    const { data: transactions } = await supabase.from('transactions').select('customer_id, amount, affiliate_id, created_at').gte('created_at', startDateIso).lte('created_at', endDateIso);
+    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id, status, plan_amount, created_at, updated_at');
     const { data: affiliates } = await supabase.from('affiliates').select('code, name');
     
-    // Tenta pegar contagem real de usuários da view/profiles
-    let realUserCount = 0;
-    let activeProfileCount = 0;
-
-    const { count: profilesCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    if (profilesCount && profilesCount > 0) {
-      realUserCount = profilesCount;
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .or('is_pro.eq.true,subscription_status.eq.active');
-        
-      if (!error) {
-        activeProfileCount = count || 0;
-      } else {
-        // Se deu erro (ex: coluna não existe), tenta admin_users_view
-        const { count: viewCount } = await supabase
-          .from('admin_users_view')
-          .select('*', { count: 'exact', head: true });
-          
-        if (viewCount && viewCount > 0) {
-          realUserCount = viewCount;
-          const { count } = await supabase
-            .from('admin_users_view')
-            .select('*', { count: 'exact', head: true })
-            .or('is_pro.eq.true,subscription_status.eq.active');
-          activeProfileCount = count || 0;
-        }
-      }
-    } else {
-      // Fallback to admin_users_view
-      const { count: viewCount } = await supabase
-        .from('admin_users_view')
-        .select('*', { count: 'exact', head: true });
-        
-      if (viewCount && viewCount > 0) {
-        realUserCount = viewCount;
-        const { count } = await supabase
-          .from('admin_users_view')
-          .select('*', { count: 'exact', head: true })
-          .or('is_pro.eq.true,subscription_status.eq.active');
-        activeProfileCount = count || 0;
-      }
-    }
+    // Tenta pegar contagem real de usuários
+    const customers = await supabaseService.getCustomers();
+    const realUserCount = customers.length;
+    const activeProfileCount = customers.filter(c => c.status === 'active').length;
 
     if (!transactions || !subscriptions) {
       return {
@@ -382,59 +424,98 @@ const realSupabaseService = {
         cac: 0,
         ltv: 0,
         activeUsers: activeProfileCount || 0,
+        totalUsers: realUserCount || 0,
         conversionRate: 0,
         trafficSource: []
       };
     }
 
     // MRR & ARR (Snapshot at the END of the period)
-    const activeAtEnd = subscriptions.filter((s: any) => {
+    // Get only the latest subscription per user to avoid double counting
+    const latestSubsMap = new Map<string, any>();
+    subscriptions.forEach((s: any) => {
+      const existing = latestSubsMap.get(s.user_id);
+      if (!existing || new Date(s.created_at) > new Date(existing.created_at)) {
+        latestSubsMap.set(s.user_id, s);
+      }
+    });
+
+    const activeAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
+      // Exclude testers
+      const customer = customers.find(c => c.id === s.user_id);
+      if (!customer || customer.status === 'tester') return false;
+
       const created = new Date(s.created_at);
       const isCreatedBeforeEnd = created <= endDate;
       const isActive = s.status === 'active';
-      const isCanceledAfterEnd = s.status === 'canceled' && new Date(s.updated_at) > endDate;
+      const isCanceledAfterEnd = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
       return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
     });
     
-    console.log("activeAtEnd debug:", {
-      activeAtEndLength: activeAtEnd.length,
-      activeProfileCount
-    });
-
-    // Se houver assinaturas, elas são a fonte mais confiável para MRR e usuários ativos
-    // Caso contrário, usamos os perfis marcados como pro
-    const activeUsersCount = Math.max(activeAtEnd.length, activeProfileCount || 0);
+    // Active Users (Paying) at end of period
+    const activeUsersCount = activeAtEnd.length;
     
-    // Calcula o MRR baseado na fonte que tem mais usuários ativos
+    // Calcula o MRR baseado na fonte mais confiável
     let mrr = 0;
-    if (activeAtEnd.length >= (activeProfileCount || 0) && activeAtEnd.length > 0) {
-      mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0);
-    } else {
-      mrr = (activeProfileCount || 0) * 49.90;
+    if (activeAtEnd.length > 0) {
+      // Soma os valores reais das assinaturas ativas
+      mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (Number(curr.plan_amount) || 49.90), 0);
+    } else if (activeProfileCount > 0) {
+      // Fallback: usa o valor padrão multiplicado pelos perfis ativos
+      // Mas apenas se não tivermos dados de assinatura nenhum
+      mrr = activeProfileCount * 49.90;
     }
 
     const arr = mrr * 12;
-
-    // Active Users (Paying) at end of period
     const activeUsers = activeUsersCount;
 
     // Churn Rate (Period specific)
-    // Subscriptions that were active at start but canceled during period
     const activeAtStart = subscriptions.filter((s: any) => {
+      const customer = customers.find(c => c.id === s.user_id);
+      if (!customer || customer.status === 'tester') return false;
+
       const created = new Date(s.created_at);
       const isCreatedBeforeStart = created < new Date(startDateIso);
       const isActive = s.status === 'active';
-      const isCanceledAfterStart = s.status === 'canceled' && new Date(s.updated_at) >= new Date(startDateIso);
+      const isCanceledAfterStart = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) >= new Date(startDateIso);
       return isCreatedBeforeStart && (isActive || isCanceledAfterStart);
     }).length;
 
-    const recentCancellations = subscriptions.filter((s: any) => 
-      s.status === 'canceled' && 
-      s.updated_at >= startDateIso && 
-      s.updated_at <= endDateIso
-    ).length;
+    const recentCancellations = subscriptions.filter((s: any) => {
+      // Exclude testers and admins
+      const customer = customers.find(c => c.id === s.user_id);
+      if (!customer || customer.status === 'tester') return false;
+
+      return s.status === 'canceled' && 
+        s.updated_at >= startDateIso && 
+        s.updated_at <= endDateIso;
+    }).length;
+
+    // Also count manual revocations from admin_actions_log if table exists
+    let manualRevocations = 0;
+    try {
+      const { data: adminLogs } = await supabase
+        .from('admin_actions_log' as any)
+        .select('*')
+        .eq('action', 'revoke')
+        .gte('created_at', startDateIso)
+        .lte('created_at', endDateIso);
+      
+      if (adminLogs) {
+        manualRevocations = adminLogs.filter((log: any) => {
+          const customer = customers.find(c => c.id === log.user_id);
+          return !(customer && customer.status === 'tester');
+        }).length;
+      }
+    } catch (e) {
+      console.warn("Could not fetch admin_actions_log for churn calculation", e);
+    }
+
+    const totalCancellations = recentCancellations + manualRevocations;
     
-    const periodChurnRate = activeAtStart > 0 ? (recentCancellations / activeAtStart) * 100 : 0;
+    // Use average active users as denominator for a more stable churn rate during growth
+    const avgActiveUsers = (activeAtStart + activeUsersCount) / 2;
+    const periodChurnRate = avgActiveUsers > 0 ? (totalCancellations / avgActiveUsers) * 100 : 0;
     
     // Normalize Churn to Monthly (30 days) for LTV calculation
     // If period is 7 days, monthly churn is roughly periodChurn * (30/7)
@@ -443,23 +524,24 @@ const realSupabaseService = {
     
     // Stable Churn for LTV (using a floor to avoid infinity and a ceiling for realism)
     // We use the monthly equivalent for LTV to keep it consistent across filters
-    const stableChurnForLtv = Math.max(monthlyChurnEquivalent, 10.0);
+    const stableChurnForLtv = Math.max(monthlyChurnEquivalent, 0.5); // Minimum 0.5% for LTV safety
     
     // CAC & LTV
     const cac = 45.00; // Estimated acquisition cost
     const arpu = activeUsers > 0 ? mrr / activeUsers : 49.90;
-    const ltv = arpu / (stableChurnForLtv / 100);
+    const ltv = arpu / (Math.max(stableChurnForLtv, 0.1) / 100);
     
     // Net New MRR (Actual change in MRR during the period)
-    const newSubsInPeriod = subscriptions.filter((s: any) => 
-      s.created_at >= startDateIso && s.created_at <= endDateIso
-    );
+    const newSubsInPeriod = subscriptions.filter((s: any) => {
+      // Exclude testers
+      const customer = customers.find(c => c.id === s.user_id);
+      if (customer && customer.status === 'tester') return false;
+      
+      return s.created_at >= startDateIso && s.created_at <= endDateIso;
+    });
     const newMrr = newSubsInPeriod.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0);
     
-    const canceledInPeriod = subscriptions.filter((s: any) => 
-      s.status === 'canceled' && s.updated_at >= startDateIso && s.updated_at <= endDateIso
-    );
-    const lostMrr = canceledInPeriod.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0);
+    const lostMrr = (recentCancellations + manualRevocations) * (mrr / (activeUsers || 1) || 49.90);
     
     const netNewMrr = newMrr - lostMrr;
 
@@ -476,6 +558,10 @@ const realSupabaseService = {
     let directCount = 0;
 
     transactions.forEach((t: any) => {
+      // Exclude testers
+      const customer = customers.find(c => c.id === t.customer_id);
+      if (customer && customer.status === 'tester') return;
+
       if (t.affiliate_id) {
         const count = trafficSourceMap.get(t.affiliate_id) || 0;
         trafficSourceMap.set(t.affiliate_id, count + 1);
@@ -516,6 +602,7 @@ const realSupabaseService = {
       cac,
       ltv,
       activeUsers,
+      totalUsers: realUserCount || 0,
       conversionRate,
       trafficSource
     };
@@ -564,6 +651,41 @@ const realSupabaseService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  manageUserPro: async (userId: string, action: 'grant' | 'revoke', reason?: string): Promise<{ success: boolean; message: string }> => {
+    const { data, error } = await supabase.functions.invoke('admin-manage-subscription', {
+      body: { user_id: userId, action, reason }
+    });
+
+    if (error) {
+      console.error('Error invoking function:', error);
+      return { success: false, message: error.message || 'Erro ao processar solicitação' };
+    }
+
+    return { 
+      success: data.success, 
+      message: data.message || (data.success ? 'Operação realizada com sucesso' : 'Falha na operação') 
+    };
+  },
+
+  manageUserTester: async (userId: string, isTester: boolean): Promise<{ success: boolean; message: string }> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_tester: isTester })
+      .eq('id', userId)
+      .select();
+
+    if (error) {
+      console.error('Error updating tester status:', error);
+      return { success: false, message: error.message || 'Erro ao atualizar status de tester' };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, message: 'Não foi possível atualizar o status. Verifique as permissões (RLS) da tabela profiles.' };
+    }
+
+    return { success: true, message: `Usuário ${isTester ? 'marcado como' : 'removido de'} tester com sucesso.` };
   }
 };
 
@@ -607,5 +729,25 @@ export const supabaseService = {
   deleteAffiliate: async (id: string): Promise<void> => {
     if (isDemoMode()) return mockService.deleteAffiliate(id);
     return realSupabaseService.deleteAffiliate(id);
+  },
+  manageUserPro: async (userId: string, action: 'grant' | 'revoke', reason?: string): Promise<{ success: boolean; message: string }> => {
+    if (isDemoMode()) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ success: true, message: `[DEMO] Pro ${action === 'grant' ? 'concedido' : 'revogado'} com sucesso.` });
+        }, 1000);
+      });
+    }
+    return realSupabaseService.manageUserPro(userId, action, reason);
+  },
+  manageUserTester: async (userId: string, isTester: boolean): Promise<{ success: boolean; message: string }> => {
+    if (isDemoMode()) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ success: true, message: `[DEMO] Usuário ${isTester ? 'marcado como' : 'removido de'} tester com sucesso.` });
+        }, 1000);
+      });
+    }
+    return realSupabaseService.manageUserTester(userId, isTester);
   }
 };

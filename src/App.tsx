@@ -10,10 +10,31 @@ import { AffiliatesPage } from '@/pages/Affiliates';
 import { Transactions } from '@/pages/Transactions';
 import { AppUsage } from '@/pages/AppUsage';
 import { Jarvis } from '@/pages/Jarvis';
+import { Login } from '@/pages/Login';
+import { supabase } from '@/lib/supabase';
 
 function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [usersFilter, setUsersFilter] = useState('all');
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleTabChange = (tab: string, filter: string = 'all') => {
     setActiveTab(tab);
@@ -48,7 +69,7 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview': return <Overview onTabChange={handleTabChange} />;
+      case 'overview': return <Overview onTabChange={handleTabChange} session={session} />;
       case 'jarvis': return <Jarvis />;
       case 'metrics': return <Metrics />;
       case 'users': return <UsersPage initialStatus={usersFilter} onTabChange={handleTabChange} />;
@@ -61,8 +82,20 @@ function App() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login onLogin={() => {}} />;
+  }
+
   return (
-    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
+    <Layout activeTab={activeTab} onTabChange={handleTabChange} session={session}>
       {renderContent()}
     </Layout>
   );

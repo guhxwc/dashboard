@@ -5,6 +5,7 @@ import { Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Wallet, CreditCard, Landmark, PiggyBank, Settings, AlertCircle, Database, Calendar, Bell, ChevronRight, Check, X } from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
+import { SkeletonCard } from '@/components/SkeletonCard';
 import { cn } from '@/lib/utils';
 
 const DAS_SCHEDULE = [
@@ -111,8 +112,18 @@ export function Financials() {
     const fetchData = async () => {
       try {
         setUsingRealData(!isDemoMode());
-        const data = await supabaseService.getTransactions();
-        setTransactions(data);
+        const [txData, customersData] = await Promise.all([
+          supabaseService.getTransactions(),
+          supabaseService.getCustomers()
+        ]);
+        
+        // Exclude testers
+        const filteredTx = txData.filter(tx => {
+          const customer = customersData.find(c => c.id === tx.customer_id);
+          return !(customer && customer.status === 'tester');
+        });
+        
+        setTransactions(filteredTx);
       } catch (err) {
         console.error("Erro ao carregar financeiro:", err);
         setUsingRealData(false);
@@ -143,11 +154,15 @@ export function Financials() {
     return { gross, fees, taxes, net };
   }, [transactions, taxRate, taxType, fixedTaxValue]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-96 text-zinc-500 dark:text-zinc-400 animate-pulse">
-      Calculando finanças...
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonCard key={i} className="h-32" />
+        ))}
+      </div>
+    );
+  }
 
   if (error) return (
     <div className="flex flex-col items-center justify-center h-96 text-rose-500 gap-2">
@@ -429,7 +444,7 @@ export function Financials() {
           <h3 className="font-semibold text-zinc-900 dark:text-white">Últimas Transações</h3>
           <span className="text-xs text-zinc-400 dark:text-zinc-500">Mostrando as 10 mais recentes</span>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
               <tr>
@@ -446,7 +461,7 @@ export function Financials() {
               {transactions.slice(0, 10).map((txn) => {
                 const fee = (txn.amount * 0.039) + 0.39;
                 return (
-                  <tr key={txn.id} className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                   <tr key={txn.id} className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs text-zinc-500 dark:text-zinc-400">{txn.id}</td>
                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-300">
                       {new Date(txn.created_at).toLocaleDateString('pt-BR')}
@@ -482,6 +497,49 @@ export function Financials() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {transactions.slice(0, 10).map((txn) => {
+            const fee = (txn.amount * 0.039) + 0.39;
+            return (
+              <div key={txn.id} className="p-4 bg-white dark:bg-zinc-900">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-mono text-[10px] text-zinc-400 mb-1 uppercase tracking-tighter">{txn.id}</div>
+                    <div className="text-sm font-bold text-zinc-900 dark:text-white">
+                      {new Date(txn.created_at).toLocaleDateString('pt-BR')}
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
+                    txn.type === 'upsell_vip' ? "bg-cyan-100 text-cyan-700 dark:bg-zinc-800 dark:text-cyan-400" : "bg-blue-100 text-blue-700 dark:bg-zinc-800 dark:text-blue-400"
+                  )}>
+                    {txn.type === 'upsell_vip' ? 'VIP Upsell' : 'Assinatura'}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-end">
+                  <div>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Origem</span>
+                    {txn.affiliate_id ? (
+                      <span className="capitalize px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                        {txn.affiliate_id.replace('_', ' ')}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400 dark:text-zinc-500 italic text-xs">Direto</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-zinc-900 dark:text-white">{formatCurrency(txn.amount)}</div>
+                    <div className="text-[10px] text-rose-500">-{formatCurrency(fee)} taxa</div>
+                    <div className="text-xs font-bold text-emerald-500 mt-1">{formatCurrency(txn.amount - fee)} líq.</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

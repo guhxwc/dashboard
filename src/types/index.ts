@@ -12,13 +12,15 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
-  status: 'active' | 'canceled' | 'past_due' | 'pending';
+  status: 'active' | 'canceled' | 'past_due' | 'pending' | 'tester';
   created_at: string;
   source: string;
   ltv: number;
   last_login?: string;
   current_streak?: number;
   plan?: 'monthly' | 'annual';
+  stripe_customer_id?: string;
+  subscription?: any;
 }
 
 export interface DailyLog {

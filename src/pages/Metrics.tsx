@@ -7,11 +7,12 @@ import {
   BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
 import { formatCurrency, formatPercentage, cn } from '@/lib/utils';
-import { DollarSign, UserMinus, TrendingUp, Activity, Database, Users, UserPlus, Calendar, ArrowRight } from 'lucide-react';
+import { DollarSign, UserMinus, TrendingUp, Activity, Database, Users, UserPlus, Calendar, ArrowRight, Settings, Check, X } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MetricCard } from '@/components/MetricCard';
 import { InfoPopover } from '@/components/InfoPopover';
 import { DateRangePicker, DateFilter } from '@/components/DateRangePicker';
+import { SkeletonCard } from '@/components/SkeletonCard';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function Metrics() {
@@ -31,6 +32,20 @@ export function Metrics() {
 
   const [dateFilter, setDateFilter] = useState<DateFilter>(getCurrentMonthFilter());
   const { theme } = useTheme();
+
+  // Ad Spend Settings
+  const [adSpend, setAdSpend] = useState(() => {
+    const saved = localStorage.getItem('metrics_ad_spend');
+    return saved ? Number(saved) : 1500; // Default R$ 1.500,00
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [draftAdSpend, setDraftAdSpend] = useState(adSpend);
+
+  const handleSaveSettings = () => {
+    setAdSpend(draftAdSpend);
+    localStorage.setItem('metrics_ad_spend', String(draftAdSpend));
+    setShowSettings(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,22 +95,47 @@ export function Metrics() {
 
   // LTV vs CAC Trend Data
   const ltvCacTrendData = useMemo(() => {
+    if (!dailyStats.length || !metrics) return [];
+
+    // Calculate daily ad spend
+    const dailyAdSpend = adSpend / 30;
+
+    // To calculate "churn acumulado até aquele dia", we need to track cumulative cancellations and users
+    let cumulativeCancellations = 0;
+    let cumulativeNewUsers = 0;
+
     return dailyStats.map((d, index) => {
-      // Mocking some realistic fluctuations
-      const baseLtv = metrics?.ltv || 500;
-      const baseCac = metrics?.cac || 42;
+      cumulativeCancellations += d.cancellations;
+      cumulativeNewUsers += d.new_users;
+
+      // Daily ARPU
+      const arpu = d.active_users > 0 ? d.mrr / d.active_users : (metrics.mrr / (metrics.activeUsers || 1) || 49.90);
+
+      // Daily CAC (smoothed to avoid infinity)
+      // If no new users that day, we use the proportional monthly spend divided by total new users so far or a default
+      const dailyCac = d.new_users > 0 ? dailyAdSpend / d.new_users : (adSpend / Math.max(metrics.activeUsers || 1, 1));
+
+      // Daily Churn (Period-to-date)
+      // Formula requested: ARPU / churn_acumulado_ate_aquele_dia
+      // But we need to normalize the churn to monthly to get a standard LTV
+      const periodToDateChurnRate = cumulativeNewUsers > 0 ? (cumulativeCancellations / cumulativeNewUsers) : 0;
       
-      const ltv = baseLtv + (Math.sin(index * 0.5) * 20) + (Math.random() * 10);
-      const cac = baseCac + (Math.cos(index * 0.5) * 5) + (Math.random() * 5);
-      
+      // Monthly equivalent for LTV
+      const daysPassed = index + 1;
+      // If we have 0 churn, LTV would be infinite. We use a floor of 1% monthly churn for a "realistic" cap.
+      // The user mentioned 10% floor was distorting, so we use 1% (0.01)
+      const monthlyChurnEquivalent = Math.max((periodToDateChurnRate / daysPassed) * 30, 0.01);
+
+      const ltv = arpu / monthlyChurnEquivalent;
+
       return {
         date: d.date,
         ltv: parseFloat(ltv.toFixed(2)),
-        cac: parseFloat(cac.toFixed(2)),
-        ratio: parseFloat((ltv / cac).toFixed(1))
+        cac: parseFloat(dailyCac.toFixed(2)),
+        ratio: parseFloat((ltv / dailyCac).toFixed(1))
       };
     });
-  }, [dailyStats, metrics]);
+  }, [dailyStats, metrics, adSpend]);
 
   const periodLabel = useMemo(() => {
     if (dateFilter.type === 'today') return 'hoje';
@@ -109,13 +149,55 @@ export function Metrics() {
     return 'período';
   }, [dateFilter]);
 
-  if (loading && !metrics) return <div className="flex items-center justify-center h-96 dark:text-zinc-400">Carregando métricas...</div>;
+  // Override metrics CAC with calculated one if using adSpend
+  const displayMetrics = useMemo(() => {
+    if (!metrics || !dailyStats.length) return metrics;
+    
+    const totalNewUsers = dailyStats.reduce((acc, curr) => acc + curr.new_users, 0);
+    const totalCancellations = dailyStats.reduce((acc, curr) => acc + curr.cancellations, 0);
+    
+    // Calculate period length in days
+    const start = new Date(dailyStats[0].date);
+    const end = new Date(dailyStats[dailyStats.length - 1].date);
+    const daysInPeriod = Math.max(Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1, 1);
+
+    // CAC = (Proportional Ad Spend) / New Customers
+    const proportionalAdSpend = (adSpend / 30) * daysInPeriod;
+    const calculatedCac = totalNewUsers > 0 ? proportionalAdSpend / totalNewUsers : (adSpend / 30); // Fallback to daily spend if no users
+
+    // LTV = ARPU / Monthly Churn Rate
+    const arpu = metrics.activeUsers > 0 ? metrics.mrr / metrics.activeUsers : 49.90;
+    
+    // Calculate monthly churn equivalent from period data
+    // Churn Rate = Cancellations / New Users (or Active Users)
+    // Here we use the user's requested logic: churn_acumulado / period
+    const periodChurnRate = totalNewUsers > 0 ? (totalCancellations / totalNewUsers) : (metrics.churnRate / 100);
+    const monthlyChurnEquivalent = Math.max((periodChurnRate / daysInPeriod) * 30, 0.01); // 1% floor
+    
+    const calculatedLtv = arpu / monthlyChurnEquivalent;
+
+    return {
+      ...metrics,
+      cac: calculatedCac,
+      ltv: calculatedLtv
+    };
+  }, [metrics, adSpend, dailyStats]);
+
+  if (loading && !metrics) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonCard key={i} className="h-32" />
+        ))}
+      </div>
+    );
+  }
 
   // Transform daily stats for MRR visualization (mock estimation)
   const mrrData = dailyStats.map(d => ({
     date: d.date,
-    mrr: d.active_users * 49.90, // Assuming avg ticket
-    churned_revenue: d.cancellations * 49.90
+    mrr: d.mrr,
+    churned_revenue: d.cancellations * (metrics?.mrr / (metrics?.activeUsers || 1) || 49.90)
   }));
 
   const isDark = theme === 'dark';
@@ -143,10 +225,10 @@ export function Metrics() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Métricas Detalhadas</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-zinc-500 dark:text-zinc-400">Análise profunda dos 4 pilares do seu SaaS.</p>
             {usingRealData ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
@@ -159,8 +241,83 @@ export function Metrics() {
             )}
           </div>
         </div>
-        <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button
+            onClick={() => {
+              setDraftAdSpend(adSpend);
+              setShowSettings(!showSettings);
+            }}
+            className={cn(
+              "p-2.5 rounded-xl border transition-all flex items-center justify-center gap-2",
+              showSettings 
+                ? "bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white" 
+                : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800"
+            )}
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-sm font-medium">Configurar Ads</span>
+          </button>
+          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+        </div>
       </div>
+
+      {/* Settings Panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Configurações de Marketing</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Ajuste os gastos para cálculos reais de CAC e LTV.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Gasto Mensal com Ads (R$)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">R$</span>
+                    <input
+                      type="number"
+                      value={draftAdSpend}
+                      onChange={(e) => setDraftAdSpend(Number(e.target.value))}
+                      className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                      placeholder="Ex: 1500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="md:col-span-2 flex items-end">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                  >
+                    <Check className="w-4 h-4" />
+                    Salvar Configurações
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Resumo do Período */}
       <AnimatePresence mode="wait">
@@ -170,7 +327,7 @@ export function Metrics() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6"
+            className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6"
           >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
@@ -178,7 +335,7 @@ export function Metrics() {
               </div>
               <div>
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Período Analisado</span>
-                <div className="flex items-center gap-2 text-lg font-bold text-zinc-900 dark:text-white">
+                <div className="flex flex-wrap items-center gap-2 text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
                   <span>{periodSummary.start}</span>
                   <ArrowRight className="w-4 h-4 text-zinc-300" />
                   <span>{periodSummary.end}</span>
@@ -186,7 +343,7 @@ export function Metrics() {
               </div>
             </div>
             
-            <div className="flex items-center gap-8 md:gap-12">
+            <div className="flex items-center gap-8 sm:gap-12">
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Novos Usuários</span>
                 <div className="flex items-baseline gap-1">
@@ -198,7 +355,7 @@ export function Metrics() {
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Usuários Ativos</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl font-bold text-zinc-900 dark:text-white">{periodSummary.activeUsers.toLocaleString()}</span>
-                  <span className="text-xs text-zinc-400 font-medium">no fim do período</span>
+                  <span className="text-xs text-zinc-400 font-medium">no fim</span>
                 </div>
               </div>
             </div>
@@ -210,7 +367,7 @@ export function Metrics() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="MRR (Receita Recorrente)"
-          value={formatCurrency(metrics?.mrr || 0)}
+          value={formatCurrency(displayMetrics?.mrr || 0)}
           icon={DollarSign}
           description={`Snapshot em ${periodLabel}`}
           info={{
@@ -221,7 +378,7 @@ export function Metrics() {
         />
         <MetricCard
           title="ARR (Receita Anual)"
-          value={formatCurrency(metrics?.arr || 0)}
+          value={formatCurrency(displayMetrics?.arr || 0)}
           icon={TrendingUp}
           description="Projeção anual"
           info={{
@@ -232,10 +389,10 @@ export function Metrics() {
         />
         <MetricCard
           title="Net New MRR"
-          value={formatCurrency(metrics?.netNewMrr || 0)}
+          value={formatCurrency(displayMetrics?.netNewMrr || 0)}
           icon={Activity}
-          trend={metrics?.netNewMrr && metrics.netNewMrr >= 0 ? "Positivo" : "Negativo"}
-          trendUp={metrics?.netNewMrr ? metrics.netNewMrr >= 0 : true}
+          trend={displayMetrics?.netNewMrr && displayMetrics.netNewMrr >= 0 ? "Positivo" : "Negativo"}
+          trendUp={displayMetrics?.netNewMrr ? displayMetrics.netNewMrr >= 0 : true}
           description={`Saldo em ${periodLabel}`}
           info={{
             meaning: "É o saldo do MRR no período: (Novas Assinaturas + Upgrades) - (Cancelamentos + Downgrades).",
@@ -245,7 +402,7 @@ export function Metrics() {
         />
         <MetricCard
           title="Usuários Ativos"
-          value={metrics?.activeUsers?.toLocaleString() || '0'}
+          value={displayMetrics?.activeUsers?.toLocaleString() || '0'}
           icon={Users}
           description={`Total em ${periodLabel}`}
           info={{
@@ -256,11 +413,11 @@ export function Metrics() {
         />
         <MetricCard
           title="Churn Rate"
-          value={formatPercentage(metrics?.churnRate || 0)}
+          value={formatPercentage(displayMetrics?.churnRate || 0)}
           icon={UserMinus}
           trendUp={true} // Lower churn is good
           description={`Cancelamentos em ${periodLabel}`}
-          className={(metrics?.churnRate || 0) > 10 ? "border-rose-200 bg-rose-50 dark:bg-rose-900/10 dark:border-rose-900/30" : ""}
+          className={(displayMetrics?.churnRate || 0) > 10 ? "border-rose-200 bg-rose-50 dark:bg-rose-900/10 dark:border-rose-900/30" : ""}
           info={{
             meaning: "Taxa de cancelamento. A porcentagem de clientes que cancelaram a assinatura em um determinado período.",
             importance: "Um churn alto destrói o crescimento do MRR. É o 'vazamento no balde' do seu SaaS.",
@@ -269,7 +426,7 @@ export function Metrics() {
         />
         <MetricCard
           title="Conversão Global"
-          value={formatPercentage(metrics?.conversionRate || 0)}
+          value={formatPercentage(displayMetrics?.conversionRate || 0)}
           icon={UserPlus}
           description="Leads que viraram Pro"
           info={{
@@ -280,7 +437,7 @@ export function Metrics() {
         />
         <MetricCard
           title="LTV (Lifetime Value)"
-          value={formatCurrency(metrics?.ltv || 0)}
+          value={formatCurrency(displayMetrics?.ltv || 0)}
           icon={Database}
           description="LTV Médio Projetado"
           info={{
@@ -291,7 +448,7 @@ export function Metrics() {
         />
         <MetricCard
           title="CAC (Custo de Aquisição)"
-          value={formatCurrency(metrics?.cac || 0)}
+          value={formatCurrency(displayMetrics?.cac || 0)}
           icon={TrendingUp}
           description="Custo médio por cliente"
           info={{
@@ -321,7 +478,7 @@ export function Metrics() {
             />
           </div>
           <div className="ml-auto text-right">
-            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics.mrr)}</div>
+            <div className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(displayMetrics?.mrr || 0)}</div>
             <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">+12.5% este mês</div>
           </div>
         </div>
@@ -381,7 +538,7 @@ export function Metrics() {
               />
             </div>
             <div className="ml-auto text-right">
-              <div className="text-2xl font-bold text-zinc-900 dark:text-white">{formatPercentage(metrics.churnRate)}</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-white">{formatPercentage(displayMetrics?.churnRate || 0)}</div>
               <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">-0.5% vs mês anterior</div>
             </div>
           </div>
@@ -428,11 +585,11 @@ export function Metrics() {
               </div>
             </div>
             <div className="flex items-end gap-4">
-              <div className="text-3xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics.ltv)}</div>
+              <div className="text-3xl font-bold text-zinc-900 dark:text-white">{formatCurrency(displayMetrics?.ltv || 0)}</div>
               <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">LTV Médio</div>
             </div>
             <div className="mt-4 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (metrics.ltv / 800) * 100)}%` }}></div>
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, ((displayMetrics?.ltv || 0) / 800) * 100)}%` }}></div>
             </div>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">Meta: R$ 800,00</p>
           </div>
@@ -456,11 +613,11 @@ export function Metrics() {
               </div>
             </div>
             <div className="flex items-end gap-4">
-              <div className="text-3xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics.cac)}</div>
+              <div className="text-3xl font-bold text-zinc-900 dark:text-white">{formatCurrency(displayMetrics?.cac || 0)}</div>
               <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Ads / Novos Clientes</div>
             </div>
             <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-sm text-amber-800 dark:text-amber-300">
-              <span className="font-semibold">LTV/CAC Ratio:</span> {(metrics.ltv / metrics.cac).toFixed(1)}x
+              <span className="font-semibold">LTV/CAC Ratio:</span> {((displayMetrics?.ltv || 0) / (displayMetrics?.cac || 1)).toFixed(1)}x
               <span className="block text-xs mt-1 opacity-75">Saudável (Ideal {'>'} 3x)</span>
             </div>
           </div>
@@ -476,37 +633,39 @@ export function Metrics() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Eficiência de Aquisição (LTV vs CAC)</h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Comparação entre o valor gerado pelo cliente e o custo para adquiri-lo.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Comparação entre valor gerado e custo de aquisição.</p>
             </div>
           </div>
 
           {/* Custom Circular Date Filter */}
-          <div className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800 w-fit self-end md:self-auto">
-            <div className="pl-2 pr-1">
-              <Calendar className="w-4 h-4 text-zinc-400" />
-            </div>
-            <div className="flex gap-1">
-              {(['today', '7d', '14d', '30d', '90d', 'month'] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => handleQuickSelect(type)}
-                  className={cn(
-                    "h-9 rounded-full flex items-center justify-center text-[10px] font-bold transition-all",
-                    (type === 'today' || type === 'month') ? "px-4" : "w-9",
-                    dateFilter.type === type 
-                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm" 
-                      : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                  )}
-                >
-                  {type === 'today' ? 'Hoje' : type === 'month' ? 'Mês' : type.replace('d', '')}
-                </button>
-              ))}
+          <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
+            <div className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800 w-fit">
+              <div className="pl-2 pr-1">
+                <Calendar className="w-4 h-4 text-zinc-400" />
+              </div>
+              <div className="flex gap-1">
+                {(['today', '7d', '14d', '30d', '90d', 'month'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => handleQuickSelect(type)}
+                    className={cn(
+                      "h-9 rounded-full flex items-center justify-center text-[10px] font-bold transition-all whitespace-nowrap",
+                      (type === 'today' || type === 'month') ? "px-4" : "w-9",
+                      dateFilter.type === type 
+                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm" 
+                        : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    )}
+                  >
+                    {type === 'today' ? 'Hoje' : type === 'month' ? 'Mês' : type.replace('d', '')}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-          <div className="lg:col-span-3 h-80">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-4">
+          <div className="lg:col-span-3 h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={ltvCacTrendData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-zinc-800" />
@@ -540,16 +699,16 @@ export function Metrics() {
           <div className="flex flex-col justify-center space-y-4">
             <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/20">
               <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">LTV Médio</p>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics.ltv)}</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(displayMetrics?.ltv || 0)}</p>
             </div>
             <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">CAC Médio</p>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics.cac)}</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(displayMetrics?.cac || 0)}</p>
             </div>
             <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20">
               <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">Ratio LTV/CAC</p>
               <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold text-zinc-900 dark:text-white">{(metrics.ltv / metrics.cac).toFixed(1)}x</p>
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white">{((displayMetrics?.ltv || 0) / (displayMetrics?.cac || 1)).toFixed(1)}x</p>
                 <span className="text-[10px] font-medium text-emerald-500">Saudável</span>
               </div>
             </div>

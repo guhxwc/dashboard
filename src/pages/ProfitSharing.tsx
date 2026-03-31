@@ -70,8 +70,18 @@ export function ProfitSharing() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await supabaseService.getTransactions();
-        setTransactions(data);
+        const [txData, customersData] = await Promise.all([
+          supabaseService.getTransactions(),
+          supabaseService.getCustomers()
+        ]);
+        
+        // Exclude testers
+        const filteredTx = txData.filter(tx => {
+          const customer = customersData.find(c => c.id === tx.customer_id);
+          return !(customer && customer.status === 'tester');
+        });
+        
+        setTransactions(filteredTx);
       } catch (err) {
         console.error("Error fetching transactions for profit sharing:", err);
       } finally {
@@ -262,25 +272,25 @@ export function ProfitSharing() {
               Após taxas, impostos, comissões e custos.
             </p>
           </div>
-          <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
+          <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
             <div className="p-3 bg-zinc-800 dark:bg-zinc-900 rounded-lg border border-zinc-700 dark:border-zinc-800">
-              <span className="block text-zinc-400 text-xs">Faturamento</span>
+              <span className="block text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Faturamento</span>
               <span className="font-medium">{formatCurrency(grossRevenue)}</span>
             </div>
             <div className="p-3 bg-zinc-800 dark:bg-zinc-900 rounded-lg border border-zinc-700 dark:border-zinc-800">
-              <span className="block text-zinc-400 text-xs">Comissões</span>
+              <span className="block text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Comissões</span>
               <span className="font-medium text-rose-400">-{formatCurrency(totalCommissions)}</span>
             </div>
             <div className="p-3 bg-zinc-800 dark:bg-zinc-900 rounded-lg border border-zinc-700 dark:border-zinc-800">
-              <span className="block text-zinc-400 text-xs">Taxas Stripe</span>
+              <span className="block text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Taxas Stripe</span>
               <span className="font-medium text-rose-400">-{formatCurrency(paymentFees)}</span>
             </div>
             <div className="p-3 bg-zinc-800 dark:bg-zinc-900 rounded-lg border border-zinc-700 dark:border-zinc-800">
-              <span className="block text-zinc-400 text-xs">Impostos</span>
+              <span className="block text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Impostos</span>
               <span className="font-medium text-rose-400">-{formatCurrency(taxes)}</span>
             </div>
             <div className="p-3 bg-zinc-800 dark:bg-zinc-900 rounded-lg border border-zinc-700 dark:border-zinc-800">
-              <span className="block text-zinc-400 text-xs">Custos Fixos</span>
+              <span className="block text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Custos Fixos</span>
               <span className="font-medium text-rose-400">-{formatCurrency(serverCosts)}</span>
             </div>
           </div>

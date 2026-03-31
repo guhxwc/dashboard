@@ -195,10 +195,10 @@ export function AffiliatesPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Área de Afiliados</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-zinc-500 dark:text-zinc-400">Gestão de parceiros e links de referência.</p>
             {usingRealData ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
@@ -211,17 +211,17 @@ export function AffiliatesPage() {
             )}
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => setShowIntegration(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors font-medium shadow-sm text-sm"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors font-medium shadow-sm text-sm"
           >
             <LinkIcon className="w-4 h-4" />
             Instruções de Integração
           </button>
           <button
             onClick={() => { setIsModalOpen(true); setFormError(null); }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
           >
             <Plus className="w-4 h-4" />
             Novo Afiliado
@@ -230,11 +230,11 @@ export function AffiliatesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl w-full overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setSelectedAffiliateId('all')}
           className={clsx(
-            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+            'px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
             selectedAffiliateId === 'all'
               ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
               : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
@@ -247,7 +247,7 @@ export function AffiliatesPage() {
             key={aff.id}
             onClick={() => setSelectedAffiliateId(aff.id)}
             className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
               selectedAffiliateId === aff.id
                 ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-white shadow-sm'
                 : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
@@ -348,7 +348,7 @@ export function AffiliatesPage() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-6">
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Leads (cadastros)</p>
               <div className="text-3xl font-bold text-zinc-900 dark:text-white">{selectedAffiliateData.count}</div>
@@ -371,7 +371,7 @@ export function AffiliatesPage() {
               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Total Pago</p>
               <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedAffiliate.total_paid || 0)}</div>
             </div>
-            <div className="p-5 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex flex-col justify-between">
+            <div className="p-5 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex flex-col justify-between col-span-1 sm:col-span-2 lg:col-span-1">
               <div>
                 <p className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase mb-1">
                   Saldo Pendente
@@ -455,18 +455,18 @@ export function AffiliatesPage() {
               </div>
             </div>
 
-            <div className="px-6 py-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <div>
                 <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Nome</label>
                 <p className="text-zinc-900 dark:text-white font-medium mt-0.5">{selectedAffiliate.name}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Email</label>
-                <p className="text-zinc-900 dark:text-white mt-0.5">{selectedAffiliate.email || '—'}</p>
+                <p className="text-zinc-900 dark:text-white mt-0.5 truncate">{selectedAffiliate.email || '—'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Chave PIX</label>
-                <p className="text-zinc-900 dark:text-white font-mono mt-0.5">{selectedAffiliate.pix_key || '—'}</p>
+                <p className="text-zinc-900 dark:text-white font-mono mt-0.5 truncate">{selectedAffiliate.pix_key || '—'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Desconto</label>
@@ -535,12 +535,16 @@ export function AffiliatesPage() {
                             'px-2 py-1 rounded-full text-xs font-medium',
                             c.status === 'active' && (c.ltv || 0) > 0
                               ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                              : c.status === 'tester'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
                               : c.status === 'active'
                               ? 'bg-blue-100 dark:bg-zinc-800 text-blue-700 dark:text-white'
                               : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
                           )}>
                             {c.status === 'active' && (c.ltv || 0) > 0
                               ? '✓ Pro'
+                              : c.status === 'tester'
+                              ? 'Tester'
                               : c.status === 'active'
                               ? 'Free'
                               : 'Cancelado'}

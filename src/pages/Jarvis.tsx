@@ -235,6 +235,7 @@ export function Jarvis() {
       try {
         const customers = await supabaseService.getCustomers();
         const activeCustomers = customers.filter(c => c.status === 'active');
+        const testerCustomers = customers.filter(c => c.status === 'tester');
         const inactiveCustomers = customers.filter(c => c.status === 'canceled' || c.status === 'past_due');
         
         const today = new Date().toISOString().split('T')[0];
@@ -246,7 +247,8 @@ export function Jarvis() {
         const contextStr = `
           Contexto Atual do App FitMind:
           - Total de Usuários: ${customers.length}
-          - Usuários Ativos: ${activeCustomers.length}
+          - Usuários Ativos (Pro): ${activeCustomers.length}
+          - Usuários Testers: ${testerCustomers.length}
           - Usuários Inativos (Churn): ${inactiveCustomers.length}
           - Registros Diários Hoje: ${logs.length}
           - Modo de Dados: ${isDemoMode() ? 'Demonstração (Mock)' : 'Real (Supabase)'}

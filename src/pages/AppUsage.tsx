@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, DailyLog } from '@/types';
 import { Search, Activity, Users, Target, Droplets, Dumbbell, Flame, Database, Download, BarChart2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { subDays } from 'date-fns';
 import { AppMetricsView } from '@/pages/AppMetricsView';
 import { UserMetricsView } from '@/pages/UserMetricsView';
@@ -32,7 +33,7 @@ export function AppUsage() {
         
         const customersData = await supabaseService.getCustomers();
         // Only active customers for usage metrics
-        setCustomers(customersData.filter(c => c.status === 'active'));
+        setCustomers(customersData.filter(c => c.status === 'active' || c.status === 'tester'));
 
         if (!isDemo) {
           const today = new Date();
@@ -271,8 +272,8 @@ export function AppUsage() {
           </button>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table/Cards */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
               <tr>
@@ -368,12 +369,73 @@ export function AppUsage() {
               )}
             </tbody>
           </table>
-          {filteredData.length > 100 && (
-            <div className="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
-              Mostrando os primeiros 100 usuários de {filteredData.length}. Use a busca ou exporte para CSV para ver todos.
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {filteredData.slice(0, 50).map((usage) => {
+            const isToday = usage.lastActive.startsWith(new Date().toISOString().split('T')[0]);
+            return (
+              <div 
+                key={usage.customer.id}
+                onClick={() => {
+                  setSelectedUser(usage.customer);
+                  setView('user-metrics');
+                }}
+                className="p-4 bg-white dark:bg-zinc-900 active:bg-zinc-50 dark:active:bg-zinc-800/50 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 font-bold text-sm">
+                      {usage.customer.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-bold text-zinc-900 dark:text-white">{usage.customer.name}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">{usage.customer.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">
+                    <Flame className={cn("w-3.5 h-3.5", usage.streak > 0 ? "text-amber-500" : "text-zinc-300")} />
+                    <span className="text-xs font-bold text-zinc-900 dark:text-white">{usage.streak}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight ${
+                      isToday ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}>
+                      {isToday && <span className="w-1 h-1 rounded-full bg-emerald-500"></span>}
+                      {new Date(usage.lastActive).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-1.5 rounded-lg", usage.proteinGoal ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" : "text-zinc-300")}>
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div className={cn("p-1.5 rounded-lg", usage.waterGoal ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "text-zinc-300")}>
+                      <Droplets className="w-4 h-4" />
+                    </div>
+                    <div className={cn("p-1.5 rounded-lg", usage.workoutCompleted ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600" : "text-zinc-300")}>
+                      <Dumbbell className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filteredData.length === 0 && (
+            <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+              Nenhum usuário encontrado.
             </div>
           )}
         </div>
+        {filteredData.length > 100 && (
+          <div className="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
+            Mostrando os primeiros 100 usuários de {filteredData.length}. Use a busca ou exporte para CSV para ver todos.
+          </div>
+        )}
       </div>
     </div>
   );

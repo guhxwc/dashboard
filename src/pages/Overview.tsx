@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { MetricCard } from '@/components/MetricCard';
 import { InfoPopover } from '@/components/InfoPopover';
+import { SkeletonCard } from '@/components/SkeletonCard';
 import { mockService } from '@/services/mockData';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { DailyStats, Metrics } from '@/types';
@@ -26,7 +27,7 @@ const DAS_SCHEDULE = [
   { month: 'Dezembro/2026', due: '2027-01-20', amount: 86.05 },
 ];
 
-export function Overview({ onTabChange }: { onTabChange?: (tab: string, filter?: string) => void }) {
+export function Overview({ onTabChange, session }: { onTabChange?: (tab: string, filter?: string) => void, session?: any }) {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,32 @@ export function Overview({ onTabChange }: { onTabChange?: (tab: string, filter?:
     fetchData();
   }, [dateFilter]);
 
-  if (loading && !metrics) return <div className="flex items-center justify-center h-96 dark:text-zinc-400">Carregando dados...</div>;
+  if (loading && !metrics) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <SkeletonCard className="h-10 w-48" />
+          <div className="flex items-center gap-3">
+            <SkeletonCard className="h-10 w-48" />
+            <SkeletonCard className="h-10 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkeletonCard className="h-32" />
+          <SkeletonCard className="h-32" />
+          <SkeletonCard className="h-32" />
+          <SkeletonCard className="h-32" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <SkeletonCard className="h-48" />
+            <SkeletonCard className="h-64" />
+          </div>
+          <SkeletonCard className="h-full" />
+        </div>
+      </div>
+    );
+  }
 
   const COLORS = ['#818cf8', '#a78bfa', '#f472b6'];
   const isDark = theme === 'dark';
@@ -202,7 +228,9 @@ export function Overview({ onTabChange }: { onTabChange?: (tab: string, filter?:
           {/* Hero Section */}
           <div className="bg-zinc-900 dark:bg-zinc-900 rounded-2xl p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden shadow-sm">
              <div className="relative z-10 mb-6 sm:mb-0">
-               <h2 className="text-2xl font-bold mb-1">{greeting}, Gustavo</h2>
+               <h2 className="text-2xl font-bold mb-1">
+                 {greeting}, {session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0] || 'Usuário'}
+               </h2>
                <p className="text-zinc-400 text-sm mb-6">Pronto para um dia produtivo! 🚀</p>
                <div className="text-4xl font-bold tracking-tight">
                  {timeString[0]}:{timeString[1]}

@@ -4,14 +4,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { isDemoMode, setDemoMode } from '@/services/supabaseService';
 import { useTheme } from '@/hooks/useTheme';
+import { supabase } from '@/lib/supabase';
 
 interface LayoutProps {
   children: ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  session?: any;
 }
 
-export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
+export function Layout({ children, activeTab, onTabChange, session }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [demoActive, setDemoActive] = useState(isDemoMode());
@@ -23,6 +25,16 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
     setDemoMode(newValue);
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      // The session state in App.tsx will automatically update
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   const menuItems = [
     { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'jarvis', label: 'J.A.R.V.I.S.', icon: Sparkles },
@@ -30,7 +42,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
     { id: 'users', label: 'Base de Usuários', icon: Users },
     { id: 'app-usage', label: 'Uso do App', icon: Activity },
     { id: 'affiliates', label: 'Área de Afiliados', icon: Users },
-    { id: 'transactions', label: 'Transações', icon: CreditCard },
+    { id: 'transactions', label: 'Cobranças & Transações', icon: CreditCard },
     { id: 'financials', label: 'Financeiro', icon: Wallet },
     { id: 'profit-sharing', label: 'Divisão de Sócios', icon: PieChart },
   ];
@@ -94,6 +106,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
 
       <div className={cn("p-4 border-t border-zinc-100/50 dark:border-zinc-800/50", collapsed ? "flex flex-col items-center" : "p-4")}>
         <button 
+          onClick={handleLogout}
           title={collapsed ? "Sair" : undefined}
           className={cn(
             "flex items-center rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white transition-colors",
@@ -109,11 +122,13 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
           collapsed ? "justify-center p-2" : "gap-3 px-3 py-2"
         )}>
           <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
-             <img src="https://picsum.photos/seed/gustavo/200" alt="User" className="w-full h-full object-cover" />
+             <img src={session?.user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${session?.user?.user_metadata?.full_name || session?.user?.email || 'User'}&background=random`} alt="User" className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-zinc-900 dark:text-white truncate">Gustavo</p>
+              <p className="text-[13px] font-medium text-zinc-900 dark:text-white truncate">
+                {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Admin'}
+              </p>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">Admin</p>
             </div>
           )}
@@ -220,7 +235,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
 
             <div className="flex items-center gap-3 pl-2">
               <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                <img src="https://picsum.photos/seed/gustavo/200" alt="User" className="w-full h-full object-cover" />
+                <img src={session?.user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${session?.user?.user_metadata?.full_name || session?.user?.email || 'User'}&background=random`} alt="User" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>

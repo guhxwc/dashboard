@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { mockService } from '@/services/mockData';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, Affiliate, Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity } from 'lucide-react';
+import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical } from 'lucide-react';
 import { subDays, isAfter } from 'date-fns';
+import { Pagination } from '@/components/Pagination';
+import { SkeletonCard } from '@/components/SkeletonCard';
 
 export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatus?: string, onTabChange?: (tab: string) => void }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -22,7 +24,19 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   // Modal
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
+  // Pro Management State
+  const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
+  const [testerAction, setTesterAction] = useState<{ userId: string; isTester: boolean; name: string } | null>(null);
+  const [proReason, setProReason] = useState('');
+  const [proLoading, setProLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  
   const [usingRealData, setUsingRealData] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   useEffect(() => {
     setStatusFilter(initialStatus);
@@ -50,7 +64,90 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     fetchData();
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-96 dark:text-zinc-400">Carregando base de usuários...</div>;
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleManagePro = async () => {
+    if (!proAction) return;
+    
+    setProLoading(true);
+    try {
+      const result = await supabaseService.manageUserPro(proAction.userId, proAction.action, proReason);
+      
+      if (result.success) {
+        setToast({ message: result.message, type: 'success' });
+        setProAction(null);
+        setProReason('');
+        
+        // Reload data to reflect changes
+        const [customersData, affiliatesData, transactionsData] = await Promise.all([
+          supabaseService.getCustomers(),
+          supabaseService.getAffiliates(),
+          supabaseService.getTransactions()
+        ]);
+        setCustomers(customersData);
+        setAffiliates(affiliatesData);
+        setTransactions(transactionsData);
+        
+        // Update selected customer if modal is open
+        if (selectedCustomer && selectedCustomer.id === proAction.userId) {
+          const updated = customersData.find(c => c.id === proAction.userId);
+          if (updated) setSelectedCustomer(updated);
+        }
+      } else {
+        setToast({ message: result.message, type: 'error' });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Erro inesperado ao processar Pro', type: 'error' });
+    } finally {
+      setProLoading(false);
+    }
+  };
+
+  const handleManageTester = async () => {
+    if (!testerAction) return;
+    
+    setProLoading(true);
+    try {
+      const result = await supabaseService.manageUserTester(testerAction.userId, testerAction.isTester);
+      
+      if (result.success) {
+        setToast({ message: result.message, type: 'success' });
+        setTesterAction(null);
+        
+        // Reload data to reflect changes
+        const [customersData, affiliatesData, transactionsData] = await Promise.all([
+          supabaseService.getCustomers(),
+          supabaseService.getAffiliates(),
+          supabaseService.getTransactions()
+        ]);
+        setCustomers(customersData);
+        setAffiliates(affiliatesData);
+        setTransactions(transactionsData);
+        
+        // Update selected customer if modal is open
+        if (selectedCustomer && selectedCustomer.id === testerAction.userId) {
+          const updated = customersData.find(c => c.id === testerAction.userId);
+          if (updated) setSelectedCustomer(updated);
+        }
+      } else {
+        setToast({ message: result.message, type: 'error' });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Erro inesperado ao processar Tester', type: 'error' });
+    } finally {
+      setProLoading(false);
+    }
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFilter, planFilter, sourceFilter]);
 
   const filteredCustomers = customers.filter(c => {
     // Search filter
@@ -82,6 +179,22 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     
     return true;
   });
+
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
+  
+  const paginatedCustomers = useMemo(() => {
+    return filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredCustomers, currentPage]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <SkeletonCard key={i} className="h-32" />
+        ))}
+      </div>
+    );
+  }
 
   const activeCount = customers.filter(c => c.status === 'active').length;
   const churnCount = customers.filter(c => c.status === 'canceled').length;
@@ -161,8 +274,8 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4 bg-zinc-50/50 dark:bg-zinc-800/50">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div className="relative w-full sm:w-64">
+          <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full lg:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input 
                 type="text" 
@@ -172,10 +285,10 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full lg:w-auto">
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
+                className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-sm font-medium"
               >
                 <Download className="w-4 h-4" />
                 Exportar CSV
@@ -184,14 +297,14 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           </div>
           
           {/* Advanced Filters */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
+            <div className="flex items-center gap-2 shrink-0">
               <Filter className="w-4 h-4 text-zinc-400" />
               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Filtros:</span>
             </div>
             
             <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px]"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -200,10 +313,11 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
               <option value="canceled">Status: Cancelados</option>
               <option value="past_due">Status: Atrasados (Past Due)</option>
               <option value="pending">Status: Pendentes</option>
+              <option value="tester">Status: Testers</option>
             </select>
 
             <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px]"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
             >
@@ -213,7 +327,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
             </select>
 
             <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px]"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
               value={planFilter}
               onChange={(e) => setPlanFilter(e.target.value)}
             >
@@ -223,7 +337,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
             </select>
 
             <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px]"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
             >
@@ -236,8 +350,67 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile View: Card List */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {paginatedCustomers.length === 0 ? (
+            <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+              Nenhum usuário encontrado com os filtros atuais.
+            </div>
+          ) : (
+            paginatedCustomers.map((customer) => (
+              <div 
+                key={customer.id} 
+                onClick={() => setSelectedCustomer(customer)}
+                className="p-4 space-y-3 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 font-bold text-sm">
+                      {customer.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-zinc-900 dark:text-white">{customer.name}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">{customer.email}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuId(activeMenuId === customer.id ? null : customer.id);
+                    }}
+                    className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400"
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-medium inline-flex items-center gap-1
+                    ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
+                      customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
+                      customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
+                      customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                      'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                    <span className="capitalize">{
+                      customer.status === 'active' ? 'Ativo' :
+                      customer.status === 'canceled' ? 'Cancelado' : 
+                      customer.status === 'past_due' ? 'Atrasado' : 
+                      customer.status === 'tester' ? 'Tester' : 'Pendente'
+                    }</span>
+                  </span>
+                  
+                  <div className="text-right">
+                    <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">LTV</div>
+                    <div className="text-sm font-bold text-zinc-900 dark:text-white">{formatCurrency(customer.ltv)}</div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
               <tr>
@@ -246,10 +419,11 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 <th className="px-6 py-3">Origem</th>
                 <th className="px-6 py-3">Entrou em</th>
                 <th className="px-6 py-3 text-right">LTV (Gasto Total)</th>
+                <th className="px-6 py-3 text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {filteredCustomers.map((customer) => (
+              {paginatedCustomers.map((customer) => (
                 <tr 
                   key={customer.id} 
                   onClick={() => setSelectedCustomer(customer)}
@@ -271,15 +445,18 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                         customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
                         customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
+                        customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
                         'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                       {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
                       {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
                       {customer.status === 'past_due' && <Clock className="w-3 h-3" />}
                       {customer.status === 'pending' && <Clock className="w-3 h-3" />}
+                      {customer.status === 'tester' && <FlaskConical className="w-3 h-3" />}
                       <span className="capitalize">{
                         customer.status === 'active' ? 'Ativo' :
                         customer.status === 'canceled' ? 'Cancelado' : 
-                        customer.status === 'past_due' ? 'Atrasado' : 'Pendente'
+                        customer.status === 'past_due' ? 'Atrasado' : 
+                        customer.status === 'tester' ? 'Tester' : 'Pendente'
                       }</span>
                     </span>
                   </td>
@@ -304,11 +481,104 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   <td className="px-6 py-4 text-right font-medium text-zinc-900 dark:text-white">
                     {formatCurrency(customer.ltv)}
                   </td>
+                  <td className="px-6 py-4 text-center relative">
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === customer.id ? null : customer.id);
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                      
+                      {activeMenuId === customer.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                            }}
+                          />
+                          <div className="absolute right-6 top-12 w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-800 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                            {customer.status !== 'active' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setProAction({ userId: customer.id, action: 'grant', name: customer.name, stripeId: customer.stripe_customer_id });
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 transition-colors"
+                              >
+                                <ShieldCheck className="w-4 h-4" />
+                                Conceder Pro
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setProAction({ userId: customer.id, action: 'revoke', name: customer.name, stripeId: customer.stripe_customer_id });
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-600 dark:text-rose-400 transition-colors"
+                              >
+                                <ShieldOff className="w-4 h-4" />
+                                Revogar Pro
+                              </button>
+                            )}
+                            {customer.status !== 'tester' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTesterAction({ userId: customer.id, isTester: true, name: customer.name });
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 transition-colors"
+                              >
+                                <FlaskConical className="w-4 h-4" />
+                                Marcar como Tester
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTesterAction({ userId: customer.id, isTester: false, name: customer.name });
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/20 text-zinc-600 dark:text-zinc-400 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                                Remover de Tester
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCustomer(customer);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+                            >
+                              <Search className="w-4 h-4" />
+                              Ver Detalhes
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={currentPage} 
+          totalPages={totalPages} 
+          onPageChange={setCurrentPage} 
+        />
       </div>
 
       {/* User Profile Modal */}
@@ -374,12 +644,14 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       <span className={`w-2.5 h-2.5 rounded-full ${
                         selectedCustomer.status === 'active' ? 'bg-emerald-500' : 
                         selectedCustomer.status === 'canceled' ? 'bg-zinc-400' : 
-                        selectedCustomer.status === 'past_due' ? 'bg-rose-500' : 'bg-amber-500'
+                        selectedCustomer.status === 'past_due' ? 'bg-rose-500' : 
+                        selectedCustomer.status === 'tester' ? 'bg-purple-500' : 'bg-amber-500'
                       }`}></span>
                       <span className="text-sm font-medium text-zinc-900 dark:text-white capitalize">
                         {selectedCustomer.status === 'active' ? 'Ativo' : 
                          selectedCustomer.status === 'canceled' ? 'Cancelado' : 
-                         selectedCustomer.status === 'past_due' ? 'Atrasado' : 'Pendente'}
+                         selectedCustomer.status === 'past_due' ? 'Atrasado' : 
+                         selectedCustomer.status === 'tester' ? 'Tester' : 'Pendente'}
                       </span>
                     </div>
                   </div>
@@ -435,8 +707,178 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   </table>
                 </div>
               </div>
+
+              {/* Pro Management Actions in Profile */}
+              <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider mb-4">Gerenciamento de Acesso</h3>
+                <div className="flex flex-wrap gap-3">
+                  {selectedCustomer.status !== 'active' ? (
+                    <button
+                      onClick={() => setProAction({ userId: selectedCustomer.id, action: 'grant', name: selectedCustomer.name, stripeId: selectedCustomer.stripe_customer_id })}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Conceder Acesso Pro
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setProAction({ userId: selectedCustomer.id, action: 'revoke', name: selectedCustomer.name, stripeId: selectedCustomer.stripe_customer_id })}
+                      className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <ShieldOff className="w-4 h-4" />
+                      Revogar Acesso Pro
+                    </button>
+                  )}
+                  {selectedCustomer.status !== 'tester' ? (
+                    <button
+                      onClick={() => setTesterAction({ userId: selectedCustomer.id, isTester: true, name: selectedCustomer.name })}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <FlaskConical className="w-4 h-4" />
+                      Marcar como Tester
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setTesterAction({ userId: selectedCustomer.id, isTester: false, name: selectedCustomer.name })}
+                      className="flex items-center gap-2 px-4 py-2 bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <X className="w-4 h-4" />
+                      Remover de Tester
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pro Action Confirmation Modal */}
+      {proAction && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${proAction.action === 'grant' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                  {proAction.action === 'grant' ? <ShieldCheck className="w-6 h-6" /> : <ShieldOff className="w-6 h-6" />}
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                  {proAction.action === 'grant' ? 'Conceder Acesso Pro' : 'Revogar Acesso Pro'}
+                </h3>
+              </div>
+              
+              <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                Você está prestes a {proAction.action === 'grant' ? 'conceder' : 'revogar'} o acesso Pro para <strong>{proAction.name}</strong>.
+              </p>
+
+              {proAction.stripeId && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex gap-3">
+                  <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    <strong>Atenção:</strong> Este usuário possui um ID do Stripe ({proAction.stripeId}). 
+                    {proAction.action === 'revoke' 
+                      ? ' A revogação cancelará a assinatura no Stripe imediatamente.' 
+                      : ' O acesso será concedido manualmente, ignorando o fluxo normal do Stripe.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2 mb-6">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Motivo (Opcional)</label>
+                <textarea
+                  value={proReason}
+                  onChange={(e) => setProReason(e.target.value)}
+                  placeholder="Ex: Cortesia, Erro no sistema, Cancelamento manual..."
+                  className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setProAction(null);
+                    setProReason('');
+                  }}
+                  disabled={proLoading}
+                  className="flex-1 px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleManagePro}
+                  disabled={proLoading}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
+                    proAction.action === 'grant' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                  } disabled:opacity-50`}
+                >
+                  {proLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    proAction.action === 'grant' ? 'Confirmar Concessão' : 'Confirmar Revogação'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tester Action Confirmation Modal */}
+      {testerAction && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${testerAction.isTester ? 'bg-purple-100 text-purple-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                  {testerAction.isTester ? <FlaskConical className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                  {testerAction.isTester ? 'Marcar como Tester' : 'Remover de Tester'}
+                </h3>
+              </div>
+              
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Você está prestes a {testerAction.isTester ? 'marcar' : 'remover'} <strong>{testerAction.name}</strong> {testerAction.isTester ? 'como' : 'de'} tester.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTesterAction(null)}
+                  disabled={proLoading}
+                  className="flex-1 px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleManageTester}
+                  disabled={proLoading}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
+                    testerAction.isTester ? 'bg-purple-600 hover:bg-purple-700' : 'bg-zinc-600 hover:bg-zinc-700'
+                  } disabled:opacity-50`}
+                >
+                  {proLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    testerAction.isTester ? 'Confirmar' : 'Remover'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[70] px-6 py-3 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+          toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
+        }`}>
+          {toast.type === 'success' ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-black/5 rounded-full">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
