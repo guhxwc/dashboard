@@ -62,6 +62,10 @@ const realSupabaseService = {
       supabase.from('subscriptions').select('*')
     ]);
 
+    if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
+    if (usersViewRes.error) console.error('Error fetching fitmind_users_view:', usersViewRes.error);
+    if (subsRes.error) console.error('Error fetching subscriptions:', subsRes.error);
+
     console.log('Dashboard Data Sync:', {
       profiles: profilesRes.data?.length || 0,
       auth_users_view: usersViewRes.data?.length || 0,
@@ -158,14 +162,16 @@ const realSupabaseService = {
     return finalUsers.map((p: any) => {
       const userId = p.id || p.user_id;
       const referral = referralMap.get(userId) || (p.affiliate_id ? { ref: p.affiliate_id, status: 'active' } : null);
-      const isPro = p.is_pro === true || p.subscription_status === 'active' || p.status === 'active';
+      
+      const subStatus = (p.subscription_status || p.status || '').toLowerCase();
+      const isPro = p.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
       const isTester = p.is_tester === true;
       
       let status: 'active' | 'canceled' | 'past_due' | 'pending' | 'tester' = 'pending';
       if (isTester) status = 'tester';
       else if (isPro) status = 'active';
-      else if (p.subscription_status === 'canceled' || p.status === 'canceled') status = 'canceled';
-      else if (p.subscription_status === 'past_due' || p.status === 'past_due') status = 'past_due';
+      else if (subStatus === 'canceled') status = 'canceled';
+      else if (subStatus === 'past_due') status = 'past_due';
       else status = 'pending';
 
       // Fallback robusto para Nome e Email
@@ -255,11 +261,13 @@ const realSupabaseService = {
     let currentMrr = currentActive * 49.90; // Approximate baseline MRR
 
     // 2. Tenta buscar estatísticas da view de usuários reais no período
-    const { data: realUsers } = await supabase
-      .from('admin_users_view')
-      .select('id, created_at, is_pro, subscription_status')
+    const { data: realUsers, error: usersError } = await supabase
+      .from('fitmind_users_view')
+      .select('id, created_at')
       .gte('created_at', startDateIso)
       .lte('created_at', endDateIso);
+
+    if (usersError) console.error('Error fetching fitmind_users_view in getDailyStats:', usersError);
 
     // 3. Busca também de subscriptions para ter dados de cancelamento no período
     // Buscamos tanto as criadas no período quanto as canceladas no período
@@ -307,7 +315,8 @@ const realSupabaseService = {
         stat.new_users += 1;
         
         // Check if user is active
-        const isPro = item.is_pro === true || item.subscription_status === 'active' || item.status === 'active';
+        const subStatus = (item.subscription_status || item.status || '').toLowerCase();
+        const isPro = item.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
         if (isPro) {
           stat.new_active += 1;
         }
@@ -320,7 +329,8 @@ const realSupabaseService = {
       const customer = customers.find(c => c.id === sub.user_id);
       if (!customer || customer.status === 'tester') return;
 
-      if (sub.status === 'canceled' && sub.updated_at) {
+      const subStatus = (sub.status || '').toLowerCase();
+      if (subStatus === 'canceled' && sub.updated_at) {
         const date = format(new Date(sub.updated_at), 'yyyy-MM-dd');
         if (statsMap.has(date)) {
           const stat = statsMap.get(date)!;
@@ -356,7 +366,8 @@ const realSupabaseService = {
       if (statsMap.has(createdDate)) {
         dailyMrrChanges.set(createdDate, (dailyMrrChanges.get(createdDate) || 0) + (sub.plan_amount || 49.90));
       }
-      if (sub.status === 'canceled' && sub.updated_at) {
+      const subStatus = (sub.status || '').toLowerCase();
+      if (subStatus === 'canceled' && sub.updated_at) {
         const canceledDate = format(new Date(sub.updated_at), 'yyyy-MM-dd');
         if (statsMap.has(canceledDate)) {
           dailyMrrChanges.set(canceledDate, (dailyMrrChanges.get(canceledDate) || 0) - (sub.plan_amount || 49.90));
@@ -407,13 +418,19 @@ const realSupabaseService = {
 
     // Fetch aggregates
     const { data: transactions } = await supabase.from('transactions').select('customer_id, amount, affiliate_id, created_at').gte('created_at', startDateIso).lte('created_at', endDateIso);
-    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id, status, plan_amount, created_at, updated_at');
+    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id, status, plan_amount, created_at, updated_at, customer_email, stripe_customer_id');
     const { data: affiliates } = await supabase.from('affiliates').select('code, name');
     
     // Tenta pegar contagem real de usuários
     const customers = await supabaseService.getCustomers();
     const realUserCount = customers.length;
     const activeProfileCount = customers.filter(c => c.status === 'active').length;
+
+    console.log('Metrics Calculation Debug:', {
+      subscriptionsCount: subscriptions?.length || 0,
+      activeProfileCount,
+      realUserCount
+    });
 
     if (!transactions || !subscriptions) {
       return {
@@ -433,22 +450,41 @@ const realSupabaseService = {
     // MRR & ARR (Snapshot at the END of the period)
     // Get only the latest subscription per user to avoid double counting
     const latestSubsMap = new Map<string, any>();
+    
+    // Create an email to ID map from customers for matching
+    const emailToIdMap = new Map<string, string>();
+    customers.forEach(c => {
+      if (c.email) emailToIdMap.set(c.email.toLowerCase(), c.id);
+    });
+
     subscriptions.forEach((s: any) => {
-      const existing = latestSubsMap.get(s.user_id);
+      // Use the same ID matching logic as getCustomers
+      let effectiveId = s.user_id;
+      if (!effectiveId && s.customer_email) {
+        effectiveId = emailToIdMap.get(s.customer_email.toLowerCase());
+      }
+      if (!effectiveId) {
+        effectiveId = s.stripe_customer_id || s.id;
+      }
+
+      if (!effectiveId) return;
+
+      const existing = latestSubsMap.get(effectiveId);
       if (!existing || new Date(s.created_at) > new Date(existing.created_at)) {
-        latestSubsMap.set(s.user_id, s);
+        latestSubsMap.set(effectiveId, { ...s, effectiveId });
       }
     });
 
     const activeAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
       // Exclude testers
-      const customer = customers.find(c => c.id === s.user_id);
+      const customer = customers.find(c => c.id === s.effectiveId);
       if (!customer || customer.status === 'tester') return false;
 
       const created = new Date(s.created_at);
       const isCreatedBeforeEnd = created <= endDate;
-      const isActive = s.status === 'active';
-      const isCanceledAfterEnd = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
+      const subStatus = (s.status || '').toLowerCase();
+      const isActive = subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
+      const isCanceledAfterEnd = (subStatus === 'canceled' || subStatus === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
       return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
     });
     

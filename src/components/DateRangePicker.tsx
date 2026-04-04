@@ -87,8 +87,8 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
   };
 
   return (
-    <div className="flex items-center bg-white dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center bg-white dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm max-w-full overflow-hidden">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-1">
         {(['today', '7d', '30d', 'month'] as const).map((type) => (
           <button
             key={type}

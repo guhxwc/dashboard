@@ -185,7 +185,7 @@ export function Metrics() {
 
   if (loading && !metrics) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {[...Array(4)].map((_, i) => (
           <SkeletonCard key={i} className="h-32" />
         ))}
@@ -364,7 +364,7 @@ export function Metrics() {
       </AnimatePresence>
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <MetricCard
           title="MRR (Receita Recorrente)"
           value={formatCurrency(displayMetrics?.mrr || 0)}

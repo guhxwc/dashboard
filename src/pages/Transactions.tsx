@@ -252,7 +252,7 @@ export function Transactions() {
             />
           </div>
           
-          <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
             {activeTab === 'transactions' ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl whitespace-nowrap">
@@ -299,7 +299,8 @@ export function Transactions() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50/50 dark:bg-zinc-800/30">
@@ -400,6 +401,84 @@ export function Transactions() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {loading ? (
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span>Carregando dados...</span>
+              </div>
+            </div>
+          ) : paginatedData.length === 0 ? (
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400">
+              Nenhum registro encontrado com os filtros atuais.
+            </div>
+          ) : (
+            paginatedData.map((item) => {
+              const isTx = activeTab === 'transactions';
+              const customer = isTx ? getCustomerInfo(item.customer_id) : { name: item.customer_name, email: item.customer_email };
+              
+              return (
+                <div key={item.id} className="p-4 bg-white dark:bg-zinc-900">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        {customer.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{customer.name}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[150px]">{customer.email}</p>
+                      </div>
+                    </div>
+                    {getStatusBadge(item.status)}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                    {isTx ? (
+                      <>
+                        <div>
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Valor</div>
+                          <div className="text-sm font-semibold text-zinc-900 dark:text-white">{formatCurrency(item.amount)}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Data</div>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                            {format(new Date(item.created_at), "dd/MM/yyyy")}
+                          </div>
+                        </div>
+                        <div className="col-span-2 mt-1">
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Tipo</div>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-400">{getTypeLabel(item.type)}</div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Plano</div>
+                          <div className="text-sm font-semibold text-zinc-900 dark:text-white">{formatCurrency(Number(item.plan_amount) || 49.90)}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Início</div>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                            {format(new Date(item.created_at), "dd/MM/yyyy")}
+                          </div>
+                        </div>
+                        <div className="col-span-2 mt-1">
+                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Stripe ID</div>
+                          <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                            {item.stripe_subscription_id || 'N/A'}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">

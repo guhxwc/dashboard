@@ -212,9 +212,9 @@ export function Overview({ onTabChange, session }: { onTabChange?: (tab: string,
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Visão Geral</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Acompanhe o resumo do seu negócio</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <DateRangePicker value={dateFilter} onChange={setDateFilter} />
-          <button className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
             <Download className="w-4 h-4" />
             Exportar
           </button>
@@ -226,83 +226,83 @@ export function Overview({ onTabChange, session }: { onTabChange?: (tab: string,
         <div className="lg:col-span-2 space-y-6">
           
           {/* Hero Section */}
-          <div className="bg-zinc-900 dark:bg-zinc-900 rounded-2xl p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden shadow-sm">
-             <div className="relative z-10 mb-6 sm:mb-0">
-               <h2 className="text-2xl font-bold mb-1">
+          <div className="bg-zinc-900 dark:bg-zinc-900 rounded-2xl p-4 sm:p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden shadow-sm">
+             <div className="relative z-10 mb-4 sm:mb-0">
+               <h2 className="text-xl sm:text-2xl font-bold mb-1">
                  {greeting}, {session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0] || 'Usuário'}
                </h2>
-               <p className="text-zinc-400 text-sm mb-6">Pronto para um dia produtivo! 🚀</p>
-               <div className="text-4xl font-bold tracking-tight">
+               <p className="text-zinc-400 text-xs sm:text-sm mb-4 sm:mb-6">Pronto para um dia produtivo! 🚀</p>
+               <div className="text-3xl sm:text-4xl font-bold tracking-tight">
                  {timeString[0]}:{timeString[1]}
                </div>
              </div>
              <div className="relative z-10 text-left sm:text-right">
                <div className="flex items-center sm:justify-end gap-2 mb-1">
-                 <Cloud className="w-8 h-8 text-white" />
-                 <span className="text-4xl font-bold">24°C</span>
+                 <Cloud className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                 <span className="text-3xl sm:text-4xl font-bold">24°C</span>
                </div>
-               <p className="text-zinc-400 text-sm">Parcialmente Nublado</p>
-               <p className="text-zinc-400 text-sm">Maringá, BR</p>
-               <p className="text-zinc-500 text-xs mt-2 capitalize">{dateString}</p>
+               <p className="text-zinc-400 text-xs sm:text-sm">Parcialmente Nublado</p>
+               <p className="text-zinc-400 text-xs sm:text-sm">Maringá, BR</p>
+               <p className="text-zinc-500 text-[10px] sm:text-xs mt-2 capitalize">{dateString}</p>
              </div>
           </div>
 
           {/* 4 Small Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <DollarSign className="w-4 h-4" />
-                  <span className="text-xs font-medium">MRR</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-zinc-500 dark:text-zinc-400">
+                  <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-[10px] sm:text-xs font-medium">MRR</span>
                 </div>
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics?.mrr || 0)}</span>
-                <span className="text-xs font-medium text-emerald-500">+12%</span>
+                <span className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white">{formatCurrency(metrics?.mrr || 0)}</span>
+                <span className="text-[10px] sm:text-xs font-medium text-emerald-500">+12%</span>
               </div>
             </div>
             
             <button 
               onClick={() => onTabChange?.('users', 'active')}
-              className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+              className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <Users className="w-4 h-4 group-hover:text-blue-500 transition-colors" />
-                  <span className="text-xs font-medium">Usuários Ativos</span>
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-zinc-500 dark:text-zinc-400">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:text-blue-500 transition-colors" />
+                  <span className="text-[10px] sm:text-xs font-medium">Ativos</span>
                 </div>
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">{metrics?.activeUsers?.toLocaleString() || '0'}</span>
-                <span className="text-xs font-medium text-emerald-500">+5%</span>
+                <span className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white">{metrics?.activeUsers?.toLocaleString() || '0'}</span>
+                <span className="text-[10px] sm:text-xs font-medium text-emerald-500">+5%</span>
               </div>
             </button>
-
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <Activity className="w-4 h-4" />
-                  <span className="text-xs font-medium">Conversão</span>
+ 
+            <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-zinc-500 dark:text-zinc-400">
+                  <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-[10px] sm:text-xs font-medium">Conversão</span>
                 </div>
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">{formatPercentage(metrics?.conversionRate || 0)}</span>
-                <span className="text-xs font-medium text-emerald-500">+2%</span>
+                <span className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white">{formatPercentage(metrics?.conversionRate || 0)}</span>
+                <span className="text-[10px] sm:text-xs font-medium text-emerald-500">+2%</span>
               </div>
             </div>
-
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <Database className="w-4 h-4" />
-                  <span className="text-xs font-medium">Total de Usuários</span>
+ 
+            <div className="bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-zinc-500 dark:text-zinc-400">
+                  <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-[10px] sm:text-xs font-medium">Total</span>
                 </div>
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">
+                <span className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white">
                   {metrics?.totalUsers?.toLocaleString() || '0'}
                 </span>
-                <span className="text-xs font-medium text-zinc-500">Base total</span>
+                <span className="text-[10px] sm:text-xs font-medium text-zinc-500">Base</span>
               </div>
             </div>
           </div>
@@ -579,7 +579,7 @@ export function Overview({ onTabChange, session }: { onTabChange?: (tab: string,
             </div>
             
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">MRR</p>
                   <p className="text-lg font-bold text-zinc-900 dark:text-white">{formatCurrency(selectedDayStats.mrr)}</p>

@@ -171,7 +171,7 @@ export function AppUsage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Uso do App</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-zinc-500 dark:text-zinc-400">Engajamento e adoção dos usuários ativos.</p>
             {usingRealData ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
@@ -187,7 +187,7 @@ export function AppUsage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setView('app-metrics')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-600/20"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-600/20 w-full sm:w-auto"
           >
             <BarChart2 className="w-4 h-4" />
             Métricas
@@ -196,56 +196,56 @@ export function AppUsage() {
       </div>
 
       {/* Resumo de Engajamento */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">DAU (Diário)</h3>
+            <h3 className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">DAU</h3>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-zinc-900 dark:text-white">{dauCount}</span>
-            <span className="text-sm font-medium text-emerald-500">{activeCount > 0 ? Math.round((dauCount / activeCount) * 100) : 0}%</span>
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{dauCount}</span>
+            <span className="text-[10px] sm:text-sm font-medium text-emerald-500">{activeCount > 0 ? Math.round((dauCount / activeCount) * 100) : 0}%</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
-              <Target className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="p-1.5 sm:p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 dark:text-rose-400" />
             </div>
-            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Meta Proteína</h3>
+            <h3 className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Proteína</h3>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.proteinGoal).length}</span>
-            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.proteinGoal).length}</span>
+            <span className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <Droplets className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Meta Água</h3>
+            <h3 className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Água</h3>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.waterGoal).length}</span>
-            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.waterGoal).length}</span>
+            <span className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-              <Dumbbell className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="p-1.5 sm:p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+              <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Treinos</h3>
+            <h3 className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Treinos</h3>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.workoutCompleted).length}</span>
-            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{usageData.filter(u => u.workoutCompleted).length}</span>
+            <span className="text-[10px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">hoje</span>
           </div>
         </div>
       </div>

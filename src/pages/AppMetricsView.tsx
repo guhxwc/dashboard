@@ -137,28 +137,28 @@ export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealDat
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg shrink-0">
               <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Métricas de Uso do App</h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Visão geral do engajamento e retenção</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Métricas de Uso do App</h1>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">Visão geral do engajamento e retenção</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Top Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard title="DAU" value={dau.toString()} subtitle="Usuários Ativos Diários" icon={<Users className="w-4 h-4" />} color="blue" onInfoClick={() => setSelectedMetricInfo(appMetricsDictionary['DAU'])} />
         <MetricCard title="MAU" value={mau.toString()} subtitle="Usuários Ativos Mensais" icon={<Calendar className="w-4 h-4" />} color="indigo" onInfoClick={() => setSelectedMetricInfo(appMetricsDictionary['MAU'])} />
         <MetricCard title="Stickiness" value={`${stickiness}%`} subtitle="DAU / MAU" icon={<TrendingUp className="w-4 h-4" />} color="emerald" onInfoClick={() => setSelectedMetricInfo(appMetricsDictionary['Stickiness'])} />

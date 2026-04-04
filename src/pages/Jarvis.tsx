@@ -170,18 +170,18 @@ const JarvisChart = ({ configStr }: { configStr: string }) => {
     };
 
     return (
-      <div className="my-8 bg-white dark:bg-[#0d0d0d] p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800/50 shadow-2xl shadow-blue-500/5 w-full max-w-3xl mx-auto overflow-hidden relative group">
+      <div className="my-4 sm:my-8 bg-white dark:bg-[#0d0d0d] p-4 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-800/50 shadow-2xl shadow-blue-500/5 w-full max-w-3xl mx-auto overflow-hidden relative group">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
         {title && (
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-4 sm:mb-8 flex items-center justify-between">
             <div>
-              <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{title}</h4>
-              <div className="w-8 h-1 bg-blue-500 rounded-full mt-1.5" />
+              <h4 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{title}</h4>
+              <div className="w-6 sm:w-8 h-1 bg-blue-500 rounded-full mt-1.5" />
             </div>
-            <div className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-full text-[10px] uppercase tracking-widest font-bold text-zinc-500">Analytics</div>
+            <div className="px-2 sm:px-3 py-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-full text-[8px] sm:text-[10px] uppercase tracking-widest font-bold text-zinc-500">Analytics</div>
           </div>
         )}
-        <div className="h-[280px] w-full">
+        <div className="h-[200px] sm:h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {renderChartType()}
           </ResponsiveContainer>
@@ -382,9 +382,9 @@ export function Jarvis() {
       </div>
 
       {messages.length === 0 ? (
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6">
-          <JarvisIcon className="w-32 h-32 mb-8" />
-          <h2 className="text-2xl font-medium text-zinc-900 dark:text-white mb-12 tracking-tight">Bom ver você, mestre.</h2>
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
+          <JarvisIcon className="w-24 h-24 sm:w-32 sm:h-32 mb-6 sm:mb-8" />
+          <h2 className="text-xl sm:text-2xl font-medium text-zinc-900 dark:text-white mb-8 sm:mb-12 tracking-tight text-center">Bom ver você, mestre.</h2>
           
           <div className="w-full max-w-2xl relative">
             <input
@@ -393,32 +393,32 @@ export function Jarvis() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask me anything..."
-              className="w-full bg-zinc-100/50 dark:bg-[#121212]/60 border border-zinc-200 dark:border-zinc-800/80 text-zinc-900 dark:text-white rounded-2xl pl-6 pr-14 py-4 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all placeholder:text-zinc-500 text-[15px] backdrop-blur-md shadow-sm"
+              className="w-full bg-zinc-100/50 dark:bg-[#121212]/60 border border-zinc-200 dark:border-zinc-800/80 text-zinc-900 dark:text-white rounded-2xl pl-4 sm:pl-6 pr-12 sm:pr-14 py-3 sm:py-4 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all placeholder:text-zinc-500 text-[14px] sm:text-[15px] backdrop-blur-md shadow-sm"
               disabled={isLoading}
             />
             <button
               onClick={handleSendMessage}
               disabled={!input.trim() || isLoading}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white disabled:opacity-50 transition-colors"
+              className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white disabled:opacity-50 transition-colors"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
       ) : (
         <>
           {/* Chat Area */}
-          <div className="relative z-10 flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+          <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 scroll-smooth">
             {/* API Status Indicator */}
             {!hasApiKey && (
-              <div className="sticky top-0 z-20 mb-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur-md flex items-center justify-between">
+              <div className="sticky top-0 z-20 mb-4 p-3 sm:p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                 <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="text-xs font-medium">Chave da API Gemini não detectada para o modo Pro.</span>
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-medium">Chave da API Gemini não detectada para o modo Pro.</span>
                 </div>
                 <button 
                   onClick={handleOpenKeyDialog}
-                  className="px-3 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-amber-600 transition-colors"
+                  className="px-3 py-1.5 sm:py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-amber-600 transition-colors w-full sm:w-auto"
                 >
                   Conectar API
                 </button>
@@ -427,20 +427,20 @@ export function Jarvis() {
             {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-4 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+            className={`flex gap-3 sm:gap-4 max-w-[95%] sm:max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
           >
             {msg.role === 'user' ? (
-              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                <User className="w-4 h-4" />
+              <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                <User className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             ) : (
-              <div className="flex-shrink-0 w-10 h-10 -ml-1 -mt-1 flex items-center justify-center">
+              <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 -ml-0.5 sm:-ml-1 -mt-0.5 sm:-mt-1 flex items-center justify-center">
                 <JarvisIcon className="w-full h-full" />
               </div>
             )}
             
-            <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed ${
+            <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} min-w-0`}>
+              <div className={`px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl text-[14px] sm:text-[15px] leading-relaxed break-words w-full ${
                 msg.role === 'user'
                   ? 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 rounded-tr-sm'
                   : 'bg-white dark:bg-[#121212] border border-zinc-100 dark:border-zinc-800/80 text-zinc-800 dark:text-zinc-200 rounded-tl-sm shadow-sm'
@@ -497,7 +497,7 @@ export function Jarvis() {
       </div>
 
       {/* Input Area */}
-      <div className="relative z-10 p-4 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-md border-t border-zinc-100 dark:border-zinc-800/50">
+      <div className="relative z-10 p-3 sm:p-4 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-md border-t border-zinc-100 dark:border-zinc-800/50">
         <div className="relative max-w-4xl mx-auto flex items-center">
           <input
             type="text"
@@ -505,19 +505,19 @@ export function Jarvis() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me anything..."
-            className="w-full bg-zinc-50 dark:bg-[#121212] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-xl pl-4 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-[15px]"
+            className="w-full bg-zinc-50 dark:bg-[#121212] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-xl pl-4 pr-12 py-3 sm:py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-[14px] sm:text-[15px]"
             disabled={isLoading}
           />
           <button
             onClick={handleSendMessage}
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-400 rounded-lg transition-all disabled:cursor-not-allowed shadow-sm"
+            className="absolute right-2 p-1.5 sm:p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-400 rounded-lg transition-all disabled:cursor-not-allowed shadow-sm"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
         <div className="text-center mt-2">
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+          <span className="text-[9px] sm:text-[10px] text-zinc-400 dark:text-zinc-500">
             Jarvis pode cometer erros. Verifique informações importantes.
           </span>
         </div>

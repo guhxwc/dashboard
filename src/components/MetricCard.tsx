@@ -24,11 +24,11 @@ export function MetricCard({ title, value, trend, trendUp, icon: Icon, descripti
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 transition-colors", className)}
+      className={cn("bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 transition-colors", className)}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg transition-colors">
-          <Icon className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+      <div className="flex justify-between items-start mb-3 sm:mb-4">
+        <div className="p-1.5 sm:p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg transition-colors">
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-700 dark:text-zinc-300" />
         </div>
         <div className="flex items-center gap-2">
           {trend && (

@@ -233,7 +233,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Base de Usuários</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-zinc-500 dark:text-zinc-400">Gerencie e analise seus clientes.</p>
             {usingRealData ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
@@ -246,24 +246,24 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => onTabChange?.('app-usage')}
-            className="px-4 py-2 rounded-lg border shadow-sm flex items-center gap-2 transition-all bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            className="flex-1 sm:flex-none px-4 py-2 rounded-lg border shadow-sm flex items-center justify-center gap-2 transition-all bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
           >
             <Activity className="w-4 h-4 text-blue-500" />
             <span className="text-sm font-medium dark:text-zinc-200">Uso do App</span>
           </button>
           <button 
             onClick={() => setStatusFilter('active')}
-            className={`px-4 py-2 rounded-lg border shadow-sm flex items-center gap-2 transition-all ${statusFilter === 'active' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 ring-2 ring-emerald-500/20' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg border shadow-sm flex items-center justify-center gap-2 transition-all ${statusFilter === 'active' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 ring-2 ring-emerald-500/20' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
           >
             <UserCheck className="w-4 h-4 text-emerald-500" />
             <span className="text-sm font-medium dark:text-zinc-200">{activeCount} Ativos</span>
           </button>
           <button 
             onClick={() => setStatusFilter('canceled')}
-            className={`px-4 py-2 rounded-lg border shadow-sm flex items-center gap-2 transition-all ${statusFilter === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 ring-2 ring-zinc-500/20' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg border shadow-sm flex items-center justify-center gap-2 transition-all ${statusFilter === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 ring-2 ring-zinc-500/20' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
           >
             <UserX className="w-4 h-4 text-rose-500" />
             <span className="text-sm font-medium dark:text-zinc-200">{churnRate.toFixed(1)}% Churn</span>
@@ -297,56 +297,58 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           </div>
           
           {/* Advanced Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
             <div className="flex items-center gap-2 shrink-0">
               <Filter className="w-4 h-4 text-zinc-400" />
               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Filtros:</span>
             </div>
             
-            <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">Status: Todos</option>
-              <option value="active">Status: Ativos</option>
-              <option value="canceled">Status: Cancelados</option>
-              <option value="past_due">Status: Atrasados (Past Due)</option>
-              <option value="pending">Status: Pendentes</option>
-              <option value="tester">Status: Testers</option>
-            </select>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide w-full">
+              <select 
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Status: Todos</option>
+                <option value="active">Status: Ativos</option>
+                <option value="canceled">Status: Cancelados</option>
+                <option value="past_due">Status: Atrasados (Past Due)</option>
+                <option value="pending">Status: Pendentes</option>
+                <option value="tester">Status: Testers</option>
+              </select>
 
-            <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            >
-              <option value="all">Data: Todo o período</option>
-              <option value="7days">Data: Últimos 7 dias</option>
-              <option value="30days">Data: Últimos 30 dias</option>
-            </select>
+              <select 
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              >
+                <option value="all">Data: Todo o período</option>
+                <option value="7days">Data: Últimos 7 dias</option>
+                <option value="30days">Data: Últimos 30 dias</option>
+              </select>
 
-            <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-            >
-              <option value="all">Plano: Todos</option>
-              <option value="monthly">Plano: Mensal</option>
-              <option value="annual">Plano: Anual</option>
-            </select>
+              <select 
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
+                value={planFilter}
+                onChange={(e) => setPlanFilter(e.target.value)}
+              >
+                <option value="all">Plano: Todos</option>
+                <option value="monthly">Plano: Mensal</option>
+                <option value="annual">Plano: Anual</option>
+              </select>
 
-            <select 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-            >
-              <option value="all">Origem: Todas</option>
-              <option value="direct">Origem: Direto</option>
-              {affiliates.map(aff => (
-                <option key={aff.id} value={aff.code.toLowerCase()}>Origem: {aff.name}</option>
-              ))}
-            </select>
+              <select 
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 min-w-[140px] shrink-0"
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+              >
+                <option value="all">Origem: Todas</option>
+                <option value="direct">Origem: Direto</option>
+                {affiliates.map(aff => (
+                  <option key={aff.id} value={aff.code.toLowerCase()}>Origem: {aff.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

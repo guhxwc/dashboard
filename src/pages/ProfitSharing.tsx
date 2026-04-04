@@ -139,14 +139,14 @@ export function ProfitSharing() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Divisão de Sócios</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Distribuição automática do lucro líquido.</p>
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-zinc-800 rounded-lg transition-colors self-start md:self-auto"
           title="Configurar Custos"
         >
           <Settings className="w-5 h-5" />
@@ -155,13 +155,13 @@ export function ProfitSharing() {
 
       {showSettings && (
         <div className="bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Configurações de Custos e Impostos</h3>
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
               className={cn(
-                "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 w-full sm:w-auto justify-center",
                 isSaving 
                   ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed" 
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
@@ -200,11 +200,11 @@ export function ProfitSharing() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wider font-bold">Tipo de Cálculo</label>
-                  <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg w-fit">
+                  <div className="flex flex-wrap gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg w-fit">
                     <button
                       onClick={() => setDraftTaxType('percentage')}
                       className={cn(
-                        "px-3 py-1 text-[10px] font-medium rounded transition-all",
+                        "px-3 py-1 text-[10px] font-medium rounded transition-all flex-1 sm:flex-none",
                         draftTaxType === 'percentage' 
                           ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-white shadow-sm" 
                           : "text-zinc-500"
@@ -215,7 +215,7 @@ export function ProfitSharing() {
                     <button
                       onClick={() => setDraftTaxType('fixed')}
                       className={cn(
-                        "px-3 py-1 text-[10px] font-medium rounded transition-all",
+                        "px-3 py-1 text-[10px] font-medium rounded transition-all flex-1 sm:flex-none",
                         draftTaxType === 'fixed' 
                           ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-white shadow-sm" 
                           : "text-zinc-500"
@@ -332,9 +332,9 @@ export function ProfitSharing() {
           {data.map((partner) => {
             const Icon = partner.icon;
             return (
-              <div key={partner.name} className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <div key={partner.name} className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${partner.color}20` }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${partner.color}20` }}>
                     <Icon className="w-6 h-6" style={{ color: partner.color }} />
                   </div>
                   <div>
@@ -344,9 +344,10 @@ export function ProfitSharing() {
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right flex sm:block justify-between items-end sm:items-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800">
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 sm:hidden">A receber</p>
                   <div className="text-xl font-bold text-zinc-900 dark:text-white">{formatCurrency(partner.value)}</div>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500">A receber</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 hidden sm:block">A receber</p>
                 </div>
               </div>
             );

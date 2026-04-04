@@ -196,8 +196,8 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
             </h2>
           </div>
           
-          <div className="flex-1 flex justify-end items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 mr-2">
+          <div className="flex-1 flex justify-end items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 mr-2">
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
@@ -206,13 +206,13 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               
-              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-2"></div>
+              <div className="hidden sm:block h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-2"></div>
 
-              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Demo</span>
+              <span className="hidden sm:inline text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Demo</span>
               <button
                 onClick={handleDemoToggle}
                 className={cn(
-                  "w-9 h-5 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:focus:ring-offset-[#121212]",
+                  "hidden sm:block w-9 h-5 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:focus:ring-offset-[#121212]",
                   demoActive ? "bg-zinc-800 dark:bg-zinc-600" : "bg-zinc-200 dark:bg-zinc-800"
                 )}
               >

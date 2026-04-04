@@ -174,7 +174,7 @@ export function Login({ onLogin }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-black bg-white hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-[#121212] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-black bg-white hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-[#121212] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogIn className="w-4 h-4" />
               {loading ? 'Entrando...' : 'Entrar'}

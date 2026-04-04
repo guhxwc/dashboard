@@ -111,26 +111,26 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <button
           onClick={onBack}
-          className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors self-start shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
+          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl shrink-0">
             {customer.name.charAt(0)}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{customer.name}</h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">{customer.email}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">{customer.name}</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{customer.email}</p>
           </div>
         </div>
       </div>
 
       {/* Top Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Consistência (30d)" value={`${consistency}%`} subtitle={`${totalActiveDays} dias ativos`} icon={<Calendar className="w-5 h-5" />} color="blue" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Consistência (30d)'])} />
         <MetricCard title="Proteína" value={`${proteinDays}d`} subtitle="Metas batidas" icon={<Target className="w-5 h-5" />} color="rose" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Proteína'])} />
         <MetricCard title="Água" value={`${waterDays}d`} subtitle="Metas batidas" icon={<Droplets className="w-5 h-5" />} color="cyan" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Água'])} />

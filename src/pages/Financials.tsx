@@ -156,7 +156,7 @@ export function Financials() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {[...Array(4)].map((_, i) => (
           <SkeletonCard key={i} className="h-32" />
         ))}
@@ -179,10 +179,10 @@ export function Financials() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Financeiro "O Cofre"</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-zinc-500 dark:text-zinc-400">Controle rigoroso de entradas, taxas e impostos.</p>
             {usingRealData ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
@@ -197,7 +197,7 @@ export function Financials() {
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-zinc-800 rounded-lg transition-colors self-start md:self-auto"
           title="Configurar Impostos"
         >
           <Settings className="w-5 h-5" />
@@ -206,13 +206,13 @@ export function Financials() {
 
       {showSettings && (
         <div className="bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Configurações de Impostos</h3>
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
               className={cn(
-                "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 w-full sm:w-auto justify-center",
                 isSaving 
                   ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed" 
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
@@ -225,11 +225,11 @@ export function Financials() {
           <div className="flex flex-col gap-6">
             <div>
               <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wider font-bold">Tipo de Cálculo</label>
-              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg w-fit">
+              <div className="flex flex-wrap gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg w-fit">
                 <button
                   onClick={() => setDraftTaxType('percentage')}
                   className={cn(
-                    "px-4 py-1.5 text-xs font-medium rounded-md transition-all",
+                    "px-4 py-1.5 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none",
                     draftTaxType === 'percentage' 
                       ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-white shadow-sm" 
                       : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -240,7 +240,7 @@ export function Financials() {
                 <button
                   onClick={() => setDraftTaxType('fixed')}
                   className={cn(
-                    "px-4 py-1.5 text-xs font-medium rounded-md transition-all",
+                    "px-4 py-1.5 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none",
                     draftTaxType === 'fixed' 
                       ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-white shadow-sm" 
                       : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -251,7 +251,7 @@ export function Financials() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {draftTaxType === 'percentage' ? (
                 <div>
                   <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">Alíquota Simples/MEI (%)</label>
@@ -293,7 +293,7 @@ export function Financials() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <MetricCard
           title="Faturamento Bruto"
           value={formatCurrency(financials.gross)}

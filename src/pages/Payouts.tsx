@@ -142,7 +142,9 @@ export function Payouts() {
         <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
           <h3 className="font-semibold text-zinc-900 dark:text-white">Detalhamento de Comissões</h3>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
               <tr>
@@ -155,7 +157,7 @@ export function Payouts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Victor Hugo</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Parceiro Principal</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.affiliate_id === 'victor_hugo').length}</td>
@@ -163,7 +165,7 @@ export function Payouts() {
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">40%</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(victorTotal)}</td>
               </tr>
-              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Allan Stachuk</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Afiliado</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.affiliate_id === 'allan_stachuk').length}</td>
@@ -171,7 +173,7 @@ export function Payouts() {
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">40%</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(allanTotal)}</td>
               </tr>
-              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800">
+              <tr className="bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 <td className="px-6 py-4 font-medium text-zinc-900 dark:text-white">Nutri (Upsell)</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">Especialista</td>
                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{transactions.filter(t => t.type === 'upsell_vip').length}</td>
@@ -181,6 +183,42 @@ export function Payouts() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {[
+            { name: 'Victor Hugo', type: 'Parceiro Principal', sales: transactions.filter(t => t.affiliate_id === 'victor_hugo').length, volume: transactions.filter(t => t.affiliate_id === 'victor_hugo').reduce((a, b) => a + b.amount, 0), rate: '40%', total: victorTotal },
+            { name: 'Allan Stachuk', type: 'Afiliado', sales: transactions.filter(t => t.affiliate_id === 'allan_stachuk').length, volume: transactions.filter(t => t.affiliate_id === 'allan_stachuk').reduce((a, b) => a + b.amount, 0), rate: '40%', total: allanTotal },
+            { name: 'Nutri (Upsell)', type: 'Especialista', sales: transactions.filter(t => t.type === 'upsell_vip').length, volume: upsellTotal, rate: '30%', total: nutriShare },
+          ].map((item, index) => (
+            <div key={index} className="p-4 bg-white dark:bg-zinc-900">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="text-sm font-bold text-zinc-900 dark:text-white">{item.name}</div>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">{item.type}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.total)}</div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest">A Pagar</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Vendas</div>
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white">{item.sales}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Volume</div>
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white">{formatCurrency(item.volume)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Taxa</div>
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white">{item.rate}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
