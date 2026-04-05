@@ -189,6 +189,9 @@ const realSupabaseService = {
         last_login: p.last_active_at || p.created_at,
         current_streak: p.current_streak || 0,
         stripe_customer_id: p.stripe_customer_id,
+        initial_weight: p.initial_weight,
+        current_weight: p.current_weight,
+        goal_weight: p.goal_weight,
       };
     }) as Customer[];
 

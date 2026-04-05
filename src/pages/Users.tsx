@@ -3,7 +3,7 @@ import { mockService } from '@/services/mockData';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, Affiliate, Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical } from 'lucide-react';
+import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown } from 'lucide-react';
 import { subDays, isAfter } from 'date-fns';
 import { Pagination } from '@/components/Pagination';
 import { SkeletonCard } from '@/components/SkeletonCard';
@@ -655,6 +655,54 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                          selectedCustomer.status === 'past_due' ? 'Atrasado' : 
                          selectedCustomer.status === 'tester' ? 'Tester' : 'Pendente'}
                       </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weight Evolution Section */}
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider mb-4">Evolução de Peso</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-1">
+                      <Scale className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Inicial</span>
+                    </div>
+                    <div className="text-lg font-bold text-zinc-900 dark:text-white">
+                      {selectedCustomer.initial_weight ? `${selectedCustomer.initial_weight} kg` : '--'}
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-center gap-2 text-blue-500 mb-1">
+                      <Activity className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Atual</span>
+                    </div>
+                    <div className="text-lg font-bold text-zinc-900 dark:text-white">
+                      {selectedCustomer.current_weight ? `${selectedCustomer.current_weight} kg` : '--'}
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-center gap-2 text-emerald-500 mb-1">
+                      <Target className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Meta</span>
+                    </div>
+                    <div className="text-lg font-bold text-zinc-900 dark:text-white">
+                      {selectedCustomer.goal_weight ? `${selectedCustomer.goal_weight} kg` : '--'}
+                    </div>
+                  </div>
+
+                  <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                      <TrendingDown className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Eliminado</span>
+                    </div>
+                    <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                      {selectedCustomer.initial_weight && selectedCustomer.current_weight 
+                        ? `${(selectedCustomer.initial_weight - selectedCustomer.current_weight).toFixed(1)} kg` 
+                        : '--'}
                     </div>
                   </div>
                 </div>

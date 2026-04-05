@@ -21,6 +21,9 @@ export interface Customer {
   plan?: 'monthly' | 'annual';
   stripe_customer_id?: string;
   subscription?: any;
+  initial_weight?: number;
+  current_weight?: number;
+  goal_weight?: number;
 }
 
 export interface DailyLog {

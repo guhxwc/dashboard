@@ -43,6 +43,10 @@ const generateCustomers = (): Customer[] => {
   for (let i = 0; i < TOTAL_ACTIVE_USERS; i++) {
     const source = sources[Math.floor(Math.random() * sources.length)];
     const createdDaysAgo = Math.floor(Math.random() * 365);
+    const initialWeight = 70 + Math.random() * 40;
+    const currentWeight = initialWeight - (Math.random() * 15);
+    const goalWeight = initialWeight - 10 - (Math.random() * 10);
+
     customers.push({
       id: `cus_act_${i}`,
       name: `Cliente Ativo ${i + 1}`,
@@ -53,6 +57,9 @@ const generateCustomers = (): Customer[] => {
       ltv: PLAN_PRICE * Math.max(1, Math.floor(createdDaysAgo / 30)) + (Math.random() > 0.85 ? UPSELL_PRICE : 0),
       last_login: subDays(new Date(), Math.floor(Math.random() * 5)).toISOString(),
       plan: 'monthly',
+      initial_weight: Number(initialWeight.toFixed(1)),
+      current_weight: Number(currentWeight.toFixed(1)),
+      goal_weight: Number(goalWeight.toFixed(1)),
     });
   }
 
@@ -60,6 +67,10 @@ const generateCustomers = (): Customer[] => {
   for (let i = 0; i < 120; i++) {
     const source = sources[Math.floor(Math.random() * sources.length)];
     const createdDaysAgo = Math.floor(Math.random() * 365) + 30;
+    const initialWeight = 70 + Math.random() * 40;
+    const currentWeight = initialWeight - (Math.random() * 5);
+    const goalWeight = initialWeight - 15;
+
     customers.push({
       id: `cus_can_${i}`,
       name: `Cliente Cancelado ${i + 1}`,
@@ -70,12 +81,19 @@ const generateCustomers = (): Customer[] => {
       ltv: PLAN_PRICE * Math.max(1, Math.floor((createdDaysAgo - 15) / 30)),
       last_login: subDays(new Date(), Math.floor(Math.random() * 60) + 10).toISOString(),
       plan: 'monthly',
+      initial_weight: Number(initialWeight.toFixed(1)),
+      current_weight: Number(currentWeight.toFixed(1)),
+      goal_weight: Number(goalWeight.toFixed(1)),
     });
   }
 
   // 30 Past Due
   for (let i = 0; i < 30; i++) {
     const source = sources[Math.floor(Math.random() * sources.length)];
+    const initialWeight = 80 + Math.random() * 30;
+    const currentWeight = initialWeight - (Math.random() * 2);
+    const goalWeight = initialWeight - 12;
+
     customers.push({
       id: `cus_past_${i}`,
       name: `Cliente Inadimplente ${i + 1}`,
@@ -86,6 +104,9 @@ const generateCustomers = (): Customer[] => {
       ltv: PLAN_PRICE * 2,
       last_login: subDays(new Date(), Math.floor(Math.random() * 15) + 5).toISOString(),
       plan: 'monthly',
+      initial_weight: Number(initialWeight.toFixed(1)),
+      current_weight: Number(currentWeight.toFixed(1)),
+      goal_weight: Number(goalWeight.toFixed(1)),
     });
   }
 
