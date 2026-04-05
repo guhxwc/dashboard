@@ -672,6 +672,11 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     <div className="text-lg font-bold text-zinc-900 dark:text-white">
                       {selectedCustomer.initial_weight ? `${selectedCustomer.initial_weight} kg` : '--'}
                     </div>
+                    {selectedCustomer.start_weight_date && (
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                        {selectedCustomer.start_weight_date}
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
@@ -701,7 +706,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     </div>
                     <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                       {selectedCustomer.initial_weight && selectedCustomer.current_weight 
-                        ? `${(selectedCustomer.initial_weight - selectedCustomer.current_weight).toFixed(1)} kg` 
+                        ? `${(selectedCustomer.current_weight - selectedCustomer.initial_weight).toFixed(1)} kg` 
                         : '--'}
                     </div>
                   </div>

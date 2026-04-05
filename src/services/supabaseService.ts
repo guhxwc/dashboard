@@ -56,21 +56,33 @@ const realSupabaseService = {
     }
 
     // 2. Busca de múltiplas fontes
-    const [profilesRes, usersViewRes, subsRes] = await Promise.all([
+    const [profilesRes, usersViewRes, subsRes, weightHistoryRes] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('fitmind_users_view').select('*'),
-      supabase.from('subscriptions').select('*')
+      supabase.from('subscriptions').select('*'),
+      supabase.from('weight_history').select('*').order('date', { ascending: false })
     ]);
 
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
     if (usersViewRes.error) console.error('Error fetching fitmind_users_view:', usersViewRes.error);
     if (subsRes.error) console.error('Error fetching subscriptions:', subsRes.error);
+    if (weightHistoryRes.error) console.error('Error fetching weight_history:', weightHistoryRes.error);
 
     console.log('Dashboard Data Sync:', {
       profiles: profilesRes.data?.length || 0,
       auth_users_view: usersViewRes.data?.length || 0,
-      subscriptions: subsRes.data?.length || 0
+      subscriptions: subsRes.data?.length || 0,
+      weight_history: weightHistoryRes.data?.length || 0
     });
+
+    const latestWeightMap = new Map<string, number>();
+    if (weightHistoryRes.data) {
+      weightHistoryRes.data.forEach((wh: any) => {
+        if (!latestWeightMap.has(wh.user_id)) {
+          latestWeightMap.set(wh.user_id, Number(wh.weight));
+        }
+      });
+    }
 
     const allUsersMap = new Map<string, any>();
     const emailToIdMap = new Map<string, string>();
@@ -118,14 +130,16 @@ const realSupabaseService = {
         const existing = allUsersMap.get(p.id);
         
         // Extração robusta de pesos do profile
-        const initialWeight = p.initial_weight || p.peso_inicial || p.starting_weight || p.weight_initial || p.peso_inicio;
-        const currentWeight = p.current_weight || p.peso_atual || p.weight || p.peso || p.peso_agora;
+        const initialWeight = p.start_weight || p.initial_weight || p.peso_inicial || p.starting_weight || p.weight_initial || p.peso_inicio;
+        const currentWeightFromHistory = latestWeightMap.get(p.id);
+        const currentWeight = currentWeightFromHistory || p.current_weight || p.peso_atual || p.weight || p.peso || p.peso_agora;
         const goalWeight = p.goal_weight || p.meta_peso || p.target_weight || p.weight_goal || p.peso_meta || p.meta;
 
         const weightData = {
           initial_weight: initialWeight ? Number(initialWeight) : undefined,
           current_weight: currentWeight ? Number(currentWeight) : undefined,
-          goal_weight: goalWeight ? Number(goalWeight) : undefined
+          goal_weight: goalWeight ? Number(goalWeight) : undefined,
+          start_weight_date: p.start_weight_date
         };
 
         allUsersMap.set(p.id, mergeData(existing || {}, { ...p, ...weightData, source_table: existing ? 'merged' : 'profiles' }));

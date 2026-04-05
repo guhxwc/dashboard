@@ -24,6 +24,7 @@ export interface Customer {
   initial_weight?: number;
   current_weight?: number;
   goal_weight?: number;
+  start_weight_date?: string;
 }
 
 export interface DailyLog {

@@ -60,6 +60,7 @@ const generateCustomers = (): Customer[] => {
       initial_weight: Number(initialWeight.toFixed(1)),
       current_weight: Number(currentWeight.toFixed(1)),
       goal_weight: Number(goalWeight.toFixed(1)),
+      start_weight_date: format(subDays(new Date(), createdDaysAgo), 'dd/MM/yyyy'),
     });
   }
 
@@ -84,6 +85,7 @@ const generateCustomers = (): Customer[] => {
       initial_weight: Number(initialWeight.toFixed(1)),
       current_weight: Number(currentWeight.toFixed(1)),
       goal_weight: Number(goalWeight.toFixed(1)),
+      start_weight_date: format(subDays(new Date(), createdDaysAgo), 'dd/MM/yyyy'),
     });
   }
 
@@ -107,6 +109,7 @@ const generateCustomers = (): Customer[] => {
       initial_weight: Number(initialWeight.toFixed(1)),
       current_weight: Number(currentWeight.toFixed(1)),
       goal_weight: Number(goalWeight.toFixed(1)),
+      start_weight_date: format(subDays(new Date(), 30), 'dd/MM/yyyy'),
     });
   }
 
