@@ -92,10 +92,18 @@ const realSupabaseService = {
         const metadata = u.raw_user_meta_data || {};
         const metadataName = metadata.full_name || metadata.name || metadata.display_name;
         
+        // Extração robusta de pesos do metadata
+        const initialWeight = metadata.initial_weight || metadata.peso_inicial || metadata.starting_weight || metadata.weight_initial || metadata.peso_inicio;
+        const currentWeight = metadata.current_weight || metadata.peso_atual || metadata.weight || metadata.peso || metadata.peso_agora;
+        const goalWeight = metadata.goal_weight || metadata.meta_peso || metadata.target_weight || metadata.weight_goal || metadata.peso_meta || metadata.meta;
+
         allUsersMap.set(u.id, { 
           ...u, 
           name: metadataName,
-          source_table: 'auth_users' 
+          source_table: 'auth_users',
+          initial_weight: initialWeight ? Number(initialWeight) : undefined,
+          current_weight: currentWeight ? Number(currentWeight) : undefined,
+          goal_weight: goalWeight ? Number(goalWeight) : undefined
         });
         
         if (u.email) {
@@ -108,7 +116,19 @@ const realSupabaseService = {
     if (profilesRes.data) {
       profilesRes.data.forEach((p: any) => {
         const existing = allUsersMap.get(p.id);
-        allUsersMap.set(p.id, mergeData(existing || {}, { ...p, source_table: existing ? 'merged' : 'profiles' }));
+        
+        // Extração robusta de pesos do profile
+        const initialWeight = p.initial_weight || p.peso_inicial || p.starting_weight || p.weight_initial || p.peso_inicio;
+        const currentWeight = p.current_weight || p.peso_atual || p.weight || p.peso || p.peso_agora;
+        const goalWeight = p.goal_weight || p.meta_peso || p.target_weight || p.weight_goal || p.peso_meta || p.meta;
+
+        const weightData = {
+          initial_weight: initialWeight ? Number(initialWeight) : undefined,
+          current_weight: currentWeight ? Number(currentWeight) : undefined,
+          goal_weight: goalWeight ? Number(goalWeight) : undefined
+        };
+
+        allUsersMap.set(p.id, mergeData(existing || {}, { ...p, ...weightData, source_table: existing ? 'merged' : 'profiles' }));
         
         if (p.email) {
           emailToIdMap.set(p.email.toLowerCase(), p.id);
