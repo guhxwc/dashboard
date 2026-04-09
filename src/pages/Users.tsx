@@ -24,6 +24,9 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   // Modal
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'all' | 'waitlist'>('all');
+
   // Pro Management State
   const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
   const [testerAction, setTesterAction] = useState<{ userId: string; isTester: boolean; name: string } | null>(null);
@@ -147,9 +150,14 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, dateFilter, planFilter, sourceFilter]);
+  }, [searchQuery, statusFilter, dateFilter, planFilter, sourceFilter, activeTab]);
 
   const filteredCustomers = customers.filter(c => {
+    // Tab filter
+    if (activeTab === 'waitlist' && !c.in_waitlist) {
+      return false;
+    }
+
     // Search filter
     if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase()) && !c.email.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
@@ -272,6 +280,30 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+        {/* Tabs */}
+        <div className="flex border-b border-zinc-100 dark:border-zinc-800">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 sm:flex-none px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === 'all'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
+            }`}
+          >
+            Todos os Usuários
+          </button>
+          <button
+            onClick={() => setActiveTab('waitlist')}
+            className={`flex-1 sm:flex-none px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === 'waitlist'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
+            }`}
+          >
+            Lista de Espera (Pós-Teste)
+          </button>
+        </div>
+
         {/* Toolbar */}
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4 bg-zinc-50/50 dark:bg-zinc-800/50">
           <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
@@ -352,8 +384,66 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           </div>
         </div>
 
-        {/* Mobile View: Card List */}
-        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+        {activeTab === 'waitlist' ? (
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedCustomers.length === 0 ? (
+              <div className="col-span-full p-8 text-center text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                Nenhum usuário na lista de espera encontrado.
+              </div>
+            ) : (
+              paginatedCustomers.map((customer) => (
+                <div 
+                  key={customer.id}
+                  onClick={() => setSelectedCustomer(customer)}
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-blue-500/50 hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
+                        {customer.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">{customer.name}</h3>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">{customer.email}</p>
+                      </div>
+                    </div>
+                    {customer.waitlist_date && (
+                      <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md">
+                        {new Date(customer.waitlist_date).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="text-center">
+                      <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Inicial</div>
+                      <div className="font-bold text-zinc-900 dark:text-white">
+                        {customer.initial_weight ? `${customer.initial_weight}kg` : '--'}
+                      </div>
+                    </div>
+                    <div className="text-center border-l border-zinc-100 dark:border-zinc-800">
+                      <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Atual</div>
+                      <div className="font-bold text-blue-600 dark:text-blue-400">
+                        {customer.current_weight ? `${customer.current_weight}kg` : '--'}
+                      </div>
+                    </div>
+                    <div className="text-center border-l border-zinc-100 dark:border-zinc-800">
+                      <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Perdido</div>
+                      <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {customer.initial_weight && customer.current_weight 
+                          ? `${(customer.initial_weight - customer.current_weight).toFixed(1)}kg` 
+                          : '--'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Mobile View: Card List */}
+            <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
           {paginatedCustomers.length === 0 ? (
             <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
               Nenhum usuário encontrado com os filtros atuais.
@@ -576,6 +666,8 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
             </tbody>
           </table>
         </div>
+        </>
+        )}
         <Pagination 
           currentPage={currentPage} 
           totalPages={totalPages} 
@@ -706,7 +798,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     </div>
                     <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                       {selectedCustomer.initial_weight && selectedCustomer.current_weight 
-                        ? `${(selectedCustomer.current_weight - selectedCustomer.initial_weight).toFixed(1)} kg` 
+                        ? `${(selectedCustomer.initial_weight - selectedCustomer.current_weight).toFixed(1)} kg` 
                         : '--'}
                     </div>
                   </div>

@@ -223,7 +223,7 @@ export function Overview({ onTabChange, session }: { onTabChange?: (tab: string,
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           
           {/* Hero Section */}
           <div className="bg-zinc-900 dark:bg-zinc-900 rounded-2xl p-4 sm:p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden shadow-sm">
@@ -390,7 +390,7 @@ export function Overview({ onTabChange, session }: { onTabChange?: (tab: string,
         </div>
 
         {/* Right Column */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {/* Insights */}
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">Insights</h3>

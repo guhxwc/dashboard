@@ -25,6 +25,8 @@ export interface Customer {
   current_weight?: number;
   goal_weight?: number;
   start_weight_date?: string;
+  in_waitlist?: boolean;
+  waitlist_date?: string;
 }
 
 export interface DailyLog {

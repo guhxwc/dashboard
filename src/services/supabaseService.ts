@@ -56,23 +56,26 @@ const realSupabaseService = {
     }
 
     // 2. Busca de múltiplas fontes
-    const [profilesRes, usersViewRes, subsRes, weightHistoryRes] = await Promise.all([
+    const [profilesRes, usersViewRes, subsRes, weightHistoryRes, waitlistRes] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('fitmind_users_view').select('*'),
       supabase.from('subscriptions').select('*'),
-      supabase.from('weight_history').select('*').order('date', { ascending: false })
+      supabase.from('weight_history').select('*').order('date', { ascending: false }),
+      supabase.from('launch_waitlist').select('*')
     ]);
 
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
     if (usersViewRes.error) console.error('Error fetching fitmind_users_view:', usersViewRes.error);
     if (subsRes.error) console.error('Error fetching subscriptions:', subsRes.error);
     if (weightHistoryRes.error) console.error('Error fetching weight_history:', weightHistoryRes.error);
+    if (waitlistRes.error) console.error('Error fetching launch_waitlist:', waitlistRes.error);
 
     console.log('Dashboard Data Sync:', {
       profiles: profilesRes.data?.length || 0,
       auth_users_view: usersViewRes.data?.length || 0,
       subscriptions: subsRes.data?.length || 0,
-      weight_history: weightHistoryRes.data?.length || 0
+      weight_history: weightHistoryRes.data?.length || 0,
+      waitlist: waitlistRes.data?.length || 0
     });
 
     const latestWeightMap = new Map<string, number>();
@@ -81,6 +84,13 @@ const realSupabaseService = {
         if (!latestWeightMap.has(wh.user_id)) {
           latestWeightMap.set(wh.user_id, Number(wh.weight));
         }
+      });
+    }
+
+    const waitlistMap = new Map<string, any>();
+    if (waitlistRes.data) {
+      waitlistRes.data.forEach((w: any) => {
+        waitlistMap.set(w.user_id, w);
       });
     }
 
@@ -212,6 +222,8 @@ const realSupabaseService = {
       const finalEmail = p.email || p.customer_email || '';
       const finalName = p.name || p.customer_name || (finalEmail ? finalEmail.split('@')[0] : 'Usuário');
 
+      const waitlistRecord = waitlistMap.get(userId);
+
       return {
         id: userId,
         name: finalName,
@@ -226,6 +238,9 @@ const realSupabaseService = {
         initial_weight: p.initial_weight,
         current_weight: p.current_weight,
         goal_weight: p.goal_weight,
+        start_weight_date: p.start_weight_date,
+        in_waitlist: !!waitlistRecord,
+        waitlist_date: waitlistRecord?.created_at,
       };
     }) as Customer[];
 

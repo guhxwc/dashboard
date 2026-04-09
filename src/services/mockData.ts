@@ -61,6 +61,8 @@ const generateCustomers = (): Customer[] => {
       current_weight: Number(currentWeight.toFixed(1)),
       goal_weight: Number(goalWeight.toFixed(1)),
       start_weight_date: format(subDays(new Date(), createdDaysAgo), 'dd/MM/yyyy'),
+      in_waitlist: Math.random() > 0.8,
+      waitlist_date: subDays(new Date(), Math.floor(Math.random() * 5)).toISOString(),
     });
   }
 
@@ -86,6 +88,8 @@ const generateCustomers = (): Customer[] => {
       current_weight: Number(currentWeight.toFixed(1)),
       goal_weight: Number(goalWeight.toFixed(1)),
       start_weight_date: format(subDays(new Date(), createdDaysAgo), 'dd/MM/yyyy'),
+      in_waitlist: Math.random() > 0.9,
+      waitlist_date: subDays(new Date(), Math.floor(Math.random() * 10)).toISOString(),
     });
   }
 

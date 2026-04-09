@@ -520,7 +520,7 @@ export function Metrics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Churn Rate */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 min-w-0">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
               <UserMinus className="w-6 h-6 text-rose-600 dark:text-rose-400" />
@@ -565,7 +565,7 @@ export function Metrics() {
         </div>
 
         {/* LTV & CAC */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
