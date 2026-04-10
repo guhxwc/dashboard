@@ -154,8 +154,8 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
 
   const filteredCustomers = customers.filter(c => {
     // Tab filter
-    if (activeTab === 'waitlist' && !c.in_waitlist) {
-      return false;
+    if (activeTab === 'waitlist') {
+      return c.in_waitlist;
     }
 
     // Search filter

@@ -196,6 +196,21 @@ const realSupabaseService = {
       });
     }
 
+    // 4. Processa waitlist (Garante que usuários só na waitlist apareçam)
+    if (waitlistRes.data) {
+      waitlistRes.data.forEach((w: any) => {
+        const existing = allUsersMap.get(w.user_id);
+        if (!existing) {
+          allUsersMap.set(w.user_id, {
+            id: w.user_id,
+            email: w.email,
+            created_at: w.created_at,
+            source_table: 'waitlist_only'
+          });
+        }
+      });
+    }
+
     if (allUsersMap.size === 0) {
       console.warn('Nenhum usuário encontrado. Verifique as tabelas no Supabase.');
       return [];
