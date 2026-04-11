@@ -789,6 +789,29 @@ const realSupabaseService = {
     }
 
     return { success: true, message: `Usuário ${isTester ? 'marcado como' : 'removido de'} tester com sucesso.` };
+  },
+
+  getAdminReferrals: async (): Promise<any[]> => {
+    // Busca referrals e faz join com profiles em memória para evitar problemas de foreign key
+    const [referralsRes, profilesRes] = await Promise.all([
+      supabase.from('referrals').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, name, email')
+    ]);
+
+    if (referralsRes.error) {
+      console.error('Error fetching admin referrals:', referralsRes.error);
+      return [];
+    }
+
+    const profilesMap = new Map<string, any>();
+    if (profilesRes.data) {
+      profilesRes.data.forEach(p => profilesMap.set(p.id, p));
+    }
+
+    return (referralsRes.data || []).map(ref => ({
+      ...ref,
+      user: profilesMap.get(ref.user_id) || null
+    }));
   }
 };
 
@@ -852,5 +875,9 @@ export const supabaseService = {
       });
     }
     return realSupabaseService.manageUserTester(userId, isTester);
+  },
+  getAdminReferrals: async (): Promise<any[]> => {
+    if (isDemoMode()) return [];
+    return realSupabaseService.getAdminReferrals();
   }
 };

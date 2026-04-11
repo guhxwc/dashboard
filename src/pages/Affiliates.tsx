@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { supabase } from '@/lib/supabase';
+import { AdminReferralsView } from './AdminReferralsView';
 
 // URL base do app Fitmind — lida da env ou usa o padrão
 const FITMIND_URL =
@@ -20,7 +21,7 @@ export function AffiliatesPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [loading, setLoading] = useState(true);
   // BUG FIX: era 'string | null', agora é sempre 'string | "all"'
-  const [selectedAffiliateId, setSelectedAffiliateId] = useState<string | 'all'>('all');
+  const [selectedAffiliateId, setSelectedAffiliateId] = useState<string | 'all' | 'referrals'>('all');
   const [usingRealData, setUsingRealData] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showIntegration, setShowIntegration] = useState(false);
@@ -242,6 +243,17 @@ export function AffiliatesPage() {
         >
           Visão Geral
         </button>
+        <button
+          onClick={() => setSelectedAffiliateId('referrals')}
+          className={clsx(
+            'px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+            selectedAffiliateId === 'referrals'
+              ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
+              : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+          )}
+        >
+          Indicações (Referrals)
+        </button>
         {affiliates.map((aff) => (
           <button
             key={aff.id}
@@ -257,6 +269,11 @@ export function AffiliatesPage() {
           </button>
         ))}
       </div>
+
+      {/* Referrals View */}
+      {selectedAffiliateId === 'referrals' && (
+        <AdminReferralsView />
+      )}
 
       {/* Overview: cards de todos os afiliados */}
       {selectedAffiliateId === 'all' && (
