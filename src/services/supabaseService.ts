@@ -566,70 +566,45 @@ const realSupabaseService = {
       }
     });
 
-    const activeSubsAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
-      // Exclude testers
-      const customer = customers.find(c => c.id === s.effectiveId);
-      if (!customer || customer.status === 'tester') return false;
-
-      const created = new Date(s.created_at);
-      const isCreatedBeforeEnd = created <= endDate;
-      const subStatus = (s.status || '').toLowerCase();
-      const isActive = subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-      const isCanceledAfterEnd = (subStatus === 'canceled' || subStatus === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
-      return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
-    });
-
-    // Include manual pros who don't have an active subscription in the period
-    const manualProsAtEnd = customers.filter(c => {
-      if (c.status === 'tester' || !c.is_manual_pro) return false;
-      
-      // Check if they are already counted in activeSubsAtEnd
-      if (activeSubsAtEnd.some(s => s.effectiveId === c.id)) return false;
-      
-      const grantedAt = c.pro_granted_at ? new Date(c.pro_granted_at) : new Date(c.created_at);
-      return grantedAt <= endDate;
-    });
-
-    const activeAtEnd = [...activeSubsAtEnd, ...manualProsAtEnd];
-    
     // Active Users (Paying) at end of period
-    const activeUsersCount = activeAtEnd.length;
+    // We use the customers array directly as it is the ultimate source of truth for the Users page
+    const activeAtEndCustomers = customers.filter(c => {
+      if (c.status === 'tester') return false;
+      
+      const created = new Date(c.created_at);
+      if (created > endDate) return false;
+      
+      // If endDate is today (or in the future), just use current status
+      if (endDate >= new Date(new Date().setHours(0,0,0,0))) {
+        return c.status === 'active';
+      }
+      
+      // For past dates, approximate based on current status
+      return c.status === 'active';
+    });
+
+    const activeUsersCount = activeAtEndCustomers.length;
     
-    // Calcula o MRR baseado na fonte mais confiável
+    // Calcula o MRR baseado na fonte mais confiável (customers array tem o LTV que mapeia para o plan_amount)
     let mrr = 0;
-    if (activeAtEnd.length > 0) {
-      // Soma os valores reais das assinaturas ativas (para manual pros, usa 49.90 como valor estimado)
-      mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (Number(curr.plan_amount) || 49.90), 0);
-    } else if (activeProfileCount > 0) {
-      // Fallback: usa o valor padrão multiplicado pelos perfis ativos
-      // Mas apenas se não tivermos dados de assinatura nenhum
-      mrr = activeProfileCount * 49.90;
-    }
+    activeAtEndCustomers.forEach(c => {
+      mrr += (c.ltv || 49.90);
+    });
 
     const arr = mrr * 12;
     const activeUsers = activeUsersCount;
 
     // Churn Rate (Period specific)
-    const activeSubsAtStart = subscriptions.filter((s: any) => {
-      const customer = customers.find(c => c.id === s.user_id);
-      if (!customer || customer.status === 'tester') return false;
-
-      const created = new Date(s.created_at);
-      const isCreatedBeforeStart = created < new Date(startDateIso);
-      const isActive = s.status === 'active';
-      const isCanceledAfterStart = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) >= new Date(startDateIso);
-      return isCreatedBeforeStart && (isActive || isCanceledAfterStart);
-    });
-    
-    const manualProsAtStart = customers.filter(c => {
-      if (c.status === 'tester' || !c.is_manual_pro) return false;
-      if (activeSubsAtStart.some((s: any) => s.user_id === c.id)) return false;
+    // Approximate active users at start
+    const activeAtStartCustomers = customers.filter(c => {
+      if (c.status === 'tester') return false;
+      const created = new Date(c.created_at);
+      if (created >= new Date(startDateIso)) return false; // Created after start date
       
-      const grantedAt = c.pro_granted_at ? new Date(c.pro_granted_at) : new Date(c.created_at);
-      return grantedAt < new Date(startDateIso);
+      return c.status === 'active'; 
     });
 
-    const activeAtStart = activeSubsAtStart.length + manualProsAtStart.length;
+    const activeAtStart = activeAtStartCustomers.length;
 
     const recentCancellations = subscriptions.filter((s: any) => {
       // Exclude testers and admins
