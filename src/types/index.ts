@@ -27,6 +27,8 @@ export interface Customer {
   start_weight_date?: string;
   in_waitlist?: boolean;
   waitlist_date?: string;
+  trial_ends_at?: string;
+  trial_start_date?: string;
 }
 
 export interface DailyLog {

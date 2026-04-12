@@ -4,7 +4,7 @@ import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, Affiliate, Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown } from 'lucide-react';
-import { subDays, isAfter } from 'date-fns';
+import { subDays, isAfter, differenceInDays } from 'date-fns';
 import { Pagination } from '@/components/Pagination';
 import { SkeletonCard } from '@/components/SkeletonCard';
 
@@ -477,19 +477,33 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded-full text-[10px] font-medium inline-flex items-center gap-1
-                    ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
-                      customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
-                      customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                      customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
-                      'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
-                    <span className="capitalize">{
-                      customer.status === 'active' ? 'Ativo' :
-                      customer.status === 'canceled' ? 'Cancelado' : 
-                      customer.status === 'past_due' ? 'Atrasado' : 
-                      customer.status === 'tester' ? 'Tester' : 'Pendente'
-                    }</span>
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-medium inline-flex items-center gap-1
+                      ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
+                        customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
+                        customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
+                        customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                        'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                      <span className="capitalize">{
+                        customer.status === 'active' ? 'Ativo' :
+                        customer.status === 'canceled' ? 'Cancelado' : 
+                        customer.status === 'past_due' ? 'Atrasado' : 
+                        customer.status === 'tester' ? 'Tester' : 'Pendente'
+                      }</span>
+                    </span>
+                    {(() => {
+                      const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
+                      if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
+                            <Clock className="w-3 h-3" />
+                            Dia {trialDay}/14
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                   
                   <div className="text-right">
                     <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">LTV</div>
@@ -533,24 +547,38 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1
-                      ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
-                        customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
-                        customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                        customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
-                        'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
-                      {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
-                      {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
-                      {customer.status === 'past_due' && <Clock className="w-3 h-3" />}
-                      {customer.status === 'pending' && <Clock className="w-3 h-3" />}
-                      {customer.status === 'tester' && <FlaskConical className="w-3 h-3" />}
-                      <span className="capitalize">{
-                        customer.status === 'active' ? 'Ativo' :
-                        customer.status === 'canceled' ? 'Cancelado' : 
-                        customer.status === 'past_due' ? 'Atrasado' : 
-                        customer.status === 'tester' ? 'Tester' : 'Pendente'
-                      }</span>
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1
+                        ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
+                          customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
+                          customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
+                          customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                          'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                        {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
+                        {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
+                        {customer.status === 'past_due' && <Clock className="w-3 h-3" />}
+                        {customer.status === 'pending' && <Clock className="w-3 h-3" />}
+                        {customer.status === 'tester' && <FlaskConical className="w-3 h-3" />}
+                        <span className="capitalize">{
+                          customer.status === 'active' ? 'Ativo' :
+                          customer.status === 'canceled' ? 'Cancelado' : 
+                          customer.status === 'past_due' ? 'Atrasado' : 
+                          customer.status === 'tester' ? 'Tester' : 'Pendente'
+                        }</span>
+                      </span>
+                      {(() => {
+                        const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
+                        if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
+                              <Clock className="w-3 h-3" />
+                              Dia {trialDay}/14
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
                     {(() => {
@@ -722,6 +750,21 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       {selectedCustomer.plan === 'annual' ? 'Anual' : selectedCustomer.plan === 'monthly' ? 'Mensal' : 'Desconhecido'}
                     </span>
                   </div>
+
+                  {(() => {
+                    const trialDay = differenceInDays(new Date(), new Date(selectedCustomer.trial_start_date || selectedCustomer.created_at)) + 1;
+                    if (trialDay >= 1 && trialDay <= 14 && selectedCustomer.status === 'active') {
+                      return (
+                        <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4" /> Período de Teste</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
+                            Dia {trialDay} de 14
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 
                 <div className="space-y-4">

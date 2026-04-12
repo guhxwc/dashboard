@@ -187,7 +187,7 @@ const realSupabaseService = {
           subscription_status: s.status,
           stripe_customer_id: s.stripe_customer_id,
           plan_amount: s.plan_amount,
-          created_at: s.created_at,
+          subscription_date: s.created_at,
           affiliate_id: s.affiliate_id,
           has_subscription: true
         };
@@ -256,6 +256,8 @@ const realSupabaseService = {
         start_weight_date: p.start_weight_date,
         in_waitlist: !!waitlistRecord,
         waitlist_date: waitlistRecord?.created_at,
+        trial_ends_at: p.trial_ends_at,
+        trial_start_date: p.subscription_date || p.created_at,
       };
     }) as Customer[];
 
