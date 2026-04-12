@@ -232,9 +232,23 @@ const realSupabaseService = {
       const userId = p.id || p.user_id;
       const referral = referralMap.get(userId) || (p.affiliate_id ? { ref: p.affiliate_id, status: 'active' } : null);
       
-      const subStatus = (p.subscription_status || p.status || '').toLowerCase();
-      const isPro = p.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-      const isTester = p.is_tester === true;
+      const subStatus = (p.subscription_status || p.status || p.plan_status || p.stripe_status || '').toLowerCase();
+      const planName = (p.plan || p.plan_name || p.subscription_plan || '').toLowerCase();
+      
+      const isPro = p.is_pro === true || 
+                    p.is_pro === 'true' ||
+                    subStatus === 'active' || 
+                    subStatus === 'succeeded' || 
+                    subStatus === 'paid' || 
+                    subStatus === 'pro' ||
+                    subStatus === 'premium' ||
+                    planName === 'pro' ||
+                    planName === 'premium' ||
+                    planName === 'annual' ||
+                    planName === 'monthly' ||
+                    (p.subscription_status && p.subscription_status !== 'free' && p.subscription_status !== 'canceled' && p.subscription_status !== 'past_due');
+      
+      const isTester = p.is_tester === true || p.is_tester === 'true';
       
       let status: 'active' | 'canceled' | 'past_due' | 'pending' | 'tester' = 'pending';
       if (isTester) status = 'tester';
@@ -248,6 +262,9 @@ const realSupabaseService = {
       const finalName = p.name || p.customer_name || (finalEmail ? finalEmail.split('@')[0] : 'Usuário');
 
       const waitlistRecord = waitlistMap.get(userId);
+      
+      // Tenta pegar o valor da assinatura de várias colunas possíveis
+      const planAmount = Number(p.plan_amount) || Number(p.subscription_price) || Number(p.subscription_amount) || Number(p.amount) || Number(p.price) || 49.90;
 
       return {
         id: userId,
@@ -256,7 +273,7 @@ const realSupabaseService = {
         source: referral?.ref || 'direct',
         status,
         created_at: p.created_at,
-        ltv: status === 'tester' ? 0 : (isPro ? (p.plan_amount || 49.90) : 0),
+        ltv: status === 'tester' ? 0 : (isPro ? planAmount : 0),
         last_login: p.last_active_at || p.created_at,
         current_streak: p.current_streak || 0,
         stripe_customer_id: p.stripe_customer_id,
@@ -395,10 +412,8 @@ const realSupabaseService = {
         const stat = statsMap.get(date)!;
         stat.new_users += 1;
         
-        // Check if user is active
-        const subStatus = (item.subscription_status || item.status || '').toLowerCase();
-        const isPro = item.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-        if (isPro) {
+        // Check if user is active based on the ultimate source of truth
+        if (customer.status === 'active') {
           stat.new_active += 1;
         }
       }
