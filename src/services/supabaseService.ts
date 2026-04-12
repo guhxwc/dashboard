@@ -180,6 +180,16 @@ const realSupabaseService = {
         if (!userId) return;
         
         const existing = allUsersMap.get(userId);
+        
+        // Prioritize active subscriptions over canceled ones
+        const sIsActive = s.status === 'active' || s.status === 'succeeded' || s.status === 'paid';
+        const existingIsActive = existing?.subscription_status === 'active' || existing?.subscription_status === 'succeeded' || existing?.subscription_status === 'paid';
+        
+        if (existing && existingIsActive && !sIsActive) {
+          // Keep the existing active subscription data
+          return;
+        }
+
         const subData = {
           id: userId,
           name: s.customer_name,
@@ -541,12 +551,22 @@ const realSupabaseService = {
       if (!effectiveId) return;
 
       const existing = latestSubsMap.get(effectiveId);
-      if (!existing || new Date(s.created_at) > new Date(existing.created_at)) {
+      const sIsActive = s.status === 'active' || s.status === 'succeeded' || s.status === 'paid';
+      
+      if (!existing) {
         latestSubsMap.set(effectiveId, { ...s, effectiveId });
+      } else {
+        const existingIsActive = existing.status === 'active' || existing.status === 'succeeded' || existing.status === 'paid';
+        
+        if (sIsActive && !existingIsActive) {
+          latestSubsMap.set(effectiveId, { ...s, effectiveId });
+        } else if (sIsActive === existingIsActive && new Date(s.created_at) > new Date(existing.created_at)) {
+          latestSubsMap.set(effectiveId, { ...s, effectiveId });
+        }
       }
     });
 
-    const activeAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
+    const activeSubsAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
       // Exclude testers
       const customer = customers.find(c => c.id === s.effectiveId);
       if (!customer || customer.status === 'tester') return false;
@@ -558,6 +578,19 @@ const realSupabaseService = {
       const isCanceledAfterEnd = (subStatus === 'canceled' || subStatus === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
       return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
     });
+
+    // Include manual pros who don't have an active subscription in the period
+    const manualProsAtEnd = customers.filter(c => {
+      if (c.status === 'tester' || !c.is_manual_pro) return false;
+      
+      // Check if they are already counted in activeSubsAtEnd
+      if (activeSubsAtEnd.some(s => s.effectiveId === c.id)) return false;
+      
+      const grantedAt = c.pro_granted_at ? new Date(c.pro_granted_at) : new Date(c.created_at);
+      return grantedAt <= endDate;
+    });
+
+    const activeAtEnd = [...activeSubsAtEnd, ...manualProsAtEnd];
     
     // Active Users (Paying) at end of period
     const activeUsersCount = activeAtEnd.length;
@@ -565,7 +598,7 @@ const realSupabaseService = {
     // Calcula o MRR baseado na fonte mais confiável
     let mrr = 0;
     if (activeAtEnd.length > 0) {
-      // Soma os valores reais das assinaturas ativas
+      // Soma os valores reais das assinaturas ativas (para manual pros, usa 49.90 como valor estimado)
       mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (Number(curr.plan_amount) || 49.90), 0);
     } else if (activeProfileCount > 0) {
       // Fallback: usa o valor padrão multiplicado pelos perfis ativos
@@ -577,7 +610,7 @@ const realSupabaseService = {
     const activeUsers = activeUsersCount;
 
     // Churn Rate (Period specific)
-    const activeAtStart = subscriptions.filter((s: any) => {
+    const activeSubsAtStart = subscriptions.filter((s: any) => {
       const customer = customers.find(c => c.id === s.user_id);
       if (!customer || customer.status === 'tester') return false;
 
@@ -586,7 +619,17 @@ const realSupabaseService = {
       const isActive = s.status === 'active';
       const isCanceledAfterStart = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) >= new Date(startDateIso);
       return isCreatedBeforeStart && (isActive || isCanceledAfterStart);
-    }).length;
+    });
+    
+    const manualProsAtStart = customers.filter(c => {
+      if (c.status === 'tester' || !c.is_manual_pro) return false;
+      if (activeSubsAtStart.some((s: any) => s.user_id === c.id)) return false;
+      
+      const grantedAt = c.pro_granted_at ? new Date(c.pro_granted_at) : new Date(c.created_at);
+      return grantedAt < new Date(startDateIso);
+    });
+
+    const activeAtStart = activeSubsAtStart.length + manualProsAtStart.length;
 
     const recentCancellations = subscriptions.filter((s: any) => {
       // Exclude testers and admins
