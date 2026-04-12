@@ -180,6 +180,16 @@ const realSupabaseService = {
         if (!userId) return;
         
         const existing = allUsersMap.get(userId);
+        
+        // Prioritize active subscriptions over canceled ones
+        const sIsActive = s.status === 'active' || s.status === 'succeeded' || s.status === 'paid';
+        const existingIsActive = existing?.subscription_status === 'active' || existing?.subscription_status === 'succeeded' || existing?.subscription_status === 'paid';
+        
+        if (existing && existingIsActive && !sIsActive) {
+          // Keep the existing active subscription data
+          return;
+        }
+
         const subData = {
           id: userId,
           name: s.customer_name,
@@ -188,6 +198,8 @@ const realSupabaseService = {
           stripe_customer_id: s.stripe_customer_id,
           plan_amount: s.plan_amount,
           subscription_date: s.created_at,
+          subscription_end_date: s.current_period_end || s.subscription_end_date || s.ends_at,
+          plan: s.plan || s.plan_name || (s.plan_amount > 100 ? 'annual' : 'monthly'),
           affiliate_id: s.affiliate_id,
           has_subscription: true
         };
@@ -222,9 +234,23 @@ const realSupabaseService = {
       const userId = p.id || p.user_id;
       const referral = referralMap.get(userId) || (p.affiliate_id ? { ref: p.affiliate_id, status: 'active' } : null);
       
-      const subStatus = (p.subscription_status || p.status || '').toLowerCase();
-      const isPro = p.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-      const isTester = p.is_tester === true;
+      const subStatus = (p.subscription_status || p.status || p.plan_status || p.stripe_status || '').toLowerCase();
+      const planName = (p.plan || p.plan_name || p.subscription_plan || '').toLowerCase();
+      
+      const isPro = p.is_pro === true || 
+                    p.is_pro === 'true' ||
+                    subStatus === 'active' || 
+                    subStatus === 'succeeded' || 
+                    subStatus === 'paid' || 
+                    subStatus === 'pro' ||
+                    subStatus === 'premium' ||
+                    planName === 'pro' ||
+                    planName === 'premium' ||
+                    planName === 'annual' ||
+                    planName === 'monthly' ||
+                    (p.subscription_status && p.subscription_status !== 'free' && p.subscription_status !== 'canceled' && p.subscription_status !== 'past_due');
+      
+      const isTester = p.is_tester === true || p.is_tester === 'true';
       
       let status: 'active' | 'canceled' | 'past_due' | 'pending' | 'tester' = 'pending';
       if (isTester) status = 'tester';
@@ -238,6 +264,9 @@ const realSupabaseService = {
       const finalName = p.name || p.customer_name || (finalEmail ? finalEmail.split('@')[0] : 'Usuário');
 
       const waitlistRecord = waitlistMap.get(userId);
+      
+      // Tenta pegar o valor da assinatura de várias colunas possíveis
+      const planAmount = Number(p.plan_amount) || Number(p.subscription_price) || Number(p.subscription_amount) || Number(p.amount) || Number(p.price) || 49.90;
 
       return {
         id: userId,
@@ -246,9 +275,10 @@ const realSupabaseService = {
         source: referral?.ref || 'direct',
         status,
         created_at: p.created_at,
-        ltv: status === 'tester' ? 0 : (isPro ? (p.plan_amount || 49.90) : 0),
+        ltv: status === 'tester' ? 0 : (isPro ? planAmount : 0),
         last_login: p.last_active_at || p.created_at,
         current_streak: p.current_streak || 0,
+        plan: p.plan || (planName === 'annual' ? 'annual' : 'monthly'),
         stripe_customer_id: p.stripe_customer_id,
         initial_weight: p.initial_weight,
         current_weight: p.current_weight,
@@ -258,6 +288,7 @@ const realSupabaseService = {
         waitlist_date: waitlistRecord?.created_at,
         trial_ends_at: p.trial_ends_at,
         trial_start_date: p.subscription_date || p.created_at,
+        subscription_end_date: p.subscription_end_date,
         is_manual_pro: p.is_pro === true,
         pro_granted_at: p.pro_granted_at,
       };
@@ -385,10 +416,8 @@ const realSupabaseService = {
         const stat = statsMap.get(date)!;
         stat.new_users += 1;
         
-        // Check if user is active
-        const subStatus = (item.subscription_status || item.status || '').toLowerCase();
-        const isPro = item.is_pro === true || subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-        if (isPro) {
+        // Check if user is active based on the ultimate source of truth
+        if (customer.status === 'active') {
           stat.new_active += 1;
         }
       }
@@ -541,52 +570,60 @@ const realSupabaseService = {
       if (!effectiveId) return;
 
       const existing = latestSubsMap.get(effectiveId);
-      if (!existing || new Date(s.created_at) > new Date(existing.created_at)) {
+      const sIsActive = s.status === 'active' || s.status === 'succeeded' || s.status === 'paid';
+      
+      if (!existing) {
         latestSubsMap.set(effectiveId, { ...s, effectiveId });
+      } else {
+        const existingIsActive = existing.status === 'active' || existing.status === 'succeeded' || existing.status === 'paid';
+        
+        if (sIsActive && !existingIsActive) {
+          latestSubsMap.set(effectiveId, { ...s, effectiveId });
+        } else if (sIsActive === existingIsActive && new Date(s.created_at) > new Date(existing.created_at)) {
+          latestSubsMap.set(effectiveId, { ...s, effectiveId });
+        }
       }
     });
 
-    const activeAtEnd = Array.from(latestSubsMap.values()).filter((s: any) => {
-      // Exclude testers
-      const customer = customers.find(c => c.id === s.effectiveId);
-      if (!customer || customer.status === 'tester') return false;
-
-      const created = new Date(s.created_at);
-      const isCreatedBeforeEnd = created <= endDate;
-      const subStatus = (s.status || '').toLowerCase();
-      const isActive = subStatus === 'active' || subStatus === 'succeeded' || subStatus === 'paid';
-      const isCanceledAfterEnd = (subStatus === 'canceled' || subStatus === 'past_due') && s.updated_at && new Date(s.updated_at) > endDate;
-      return isCreatedBeforeEnd && (isActive || isCanceledAfterEnd);
-    });
-    
     // Active Users (Paying) at end of period
-    const activeUsersCount = activeAtEnd.length;
+    // We use the customers array directly as it is the ultimate source of truth for the Users page
+    const activeAtEndCustomers = customers.filter(c => {
+      if (c.status === 'tester') return false;
+      
+      const created = new Date(c.created_at);
+      if (created > endDate) return false;
+      
+      // If endDate is today (or in the future), just use current status
+      if (endDate >= new Date(new Date().setHours(0,0,0,0))) {
+        return c.status === 'active';
+      }
+      
+      // For past dates, approximate based on current status
+      return c.status === 'active';
+    });
+
+    const activeUsersCount = activeAtEndCustomers.length;
     
-    // Calcula o MRR baseado na fonte mais confiável
+    // Calcula o MRR baseado na fonte mais confiável (customers array tem o LTV que mapeia para o plan_amount)
     let mrr = 0;
-    if (activeAtEnd.length > 0) {
-      // Soma os valores reais das assinaturas ativas
-      mrr = activeAtEnd.reduce((acc: number, curr: any) => acc + (Number(curr.plan_amount) || 49.90), 0);
-    } else if (activeProfileCount > 0) {
-      // Fallback: usa o valor padrão multiplicado pelos perfis ativos
-      // Mas apenas se não tivermos dados de assinatura nenhum
-      mrr = activeProfileCount * 49.90;
-    }
+    activeAtEndCustomers.forEach(c => {
+      mrr += (c.ltv || 49.90);
+    });
 
     const arr = mrr * 12;
     const activeUsers = activeUsersCount;
 
     // Churn Rate (Period specific)
-    const activeAtStart = subscriptions.filter((s: any) => {
-      const customer = customers.find(c => c.id === s.user_id);
-      if (!customer || customer.status === 'tester') return false;
+    // Approximate active users at start
+    const activeAtStartCustomers = customers.filter(c => {
+      if (c.status === 'tester') return false;
+      const created = new Date(c.created_at);
+      if (created >= new Date(startDateIso)) return false; // Created after start date
+      
+      return c.status === 'active'; 
+    });
 
-      const created = new Date(s.created_at);
-      const isCreatedBeforeStart = created < new Date(startDateIso);
-      const isActive = s.status === 'active';
-      const isCanceledAfterStart = (s.status === 'canceled' || s.status === 'past_due') && s.updated_at && new Date(s.updated_at) >= new Date(startDateIso);
-      return isCreatedBeforeStart && (isActive || isCanceledAfterStart);
-    }).length;
+    const activeAtStart = activeAtStartCustomers.length;
 
     const recentCancellations = subscriptions.filter((s: any) => {
       // Exclude testers and admins
