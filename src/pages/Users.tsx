@@ -25,7 +25,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'all' | 'waitlist'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'waitlist' | 'manual_pro'>('all');
 
   // Pro Management State
   const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
@@ -156,6 +156,9 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     // Tab filter
     if (activeTab === 'waitlist') {
       return c.in_waitlist;
+    }
+    if (activeTab === 'manual_pro') {
+      return c.is_manual_pro;
     }
 
     // Search filter
@@ -302,6 +305,16 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           >
             Lista de Espera (Pós-Teste)
           </button>
+          <button
+            onClick={() => setActiveTab('manual_pro')}
+            className={`flex-1 sm:flex-none px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === 'manual_pro'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
+            }`}
+          >
+            Acessos Manuais (Pro)
+          </button>
         </div>
 
         {/* Toolbar */}
@@ -440,6 +453,57 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
               ))
             )}
           </div>
+        ) : activeTab === 'manual_pro' ? (
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedCustomers.length === 0 ? (
+              <div className="col-span-full p-8 text-center text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                Nenhum usuário com acesso Pro manual encontrado.
+              </div>
+            ) : (
+              paginatedCustomers.map((customer) => {
+                const daysInApp = customer.pro_granted_at ? differenceInDays(new Date(), new Date(customer.pro_granted_at)) : 0;
+                return (
+                  <div 
+                    key={customer.id}
+                    onClick={() => setSelectedCustomer(customer)}
+                    className="bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-5 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full -z-10"></div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
+                          {customer.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">{customer.name}</h3>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">{customer.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                      <div>
+                        <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> Data da Concessão
+                        </div>
+                        <div className="font-medium text-zinc-900 dark:text-white text-sm">
+                          {customer.pro_granted_at ? new Date(customer.pro_granted_at).toLocaleDateString('pt-BR') : 'Desconhecida'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1 flex items-center justify-end gap-1">
+                          <Clock className="w-3 h-3" /> Tempo de Uso
+                        </div>
+                        <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                          {daysInApp} {daysInApp === 1 ? 'dia' : 'dias'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         ) : (
           <>
             {/* Mobile View: Card List */}
@@ -492,6 +556,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       }</span>
                     </span>
                     {(() => {
+                      if (customer.is_manual_pro) return null;
                       const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
                       if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
                         return (
@@ -567,6 +632,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         }</span>
                       </span>
                       {(() => {
+                        if (customer.is_manual_pro) return null;
                         const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
                         if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
                           return (
@@ -752,8 +818,20 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   </div>
 
                   {(() => {
+                    if (selectedCustomer.is_manual_pro && selectedCustomer.pro_granted_at) {
+                      const daysInApp = differenceInDays(new Date(), new Date(selectedCustomer.pro_granted_at));
+                      return (
+                        <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Acesso Pro Manual</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider border border-emerald-100 dark:border-emerald-800/30">
+                            {daysInApp} {daysInApp === 1 ? 'dia' : 'dias'} de uso
+                          </span>
+                        </div>
+                      );
+                    }
+
                     const trialDay = differenceInDays(new Date(), new Date(selectedCustomer.trial_start_date || selectedCustomer.created_at)) + 1;
-                    if (trialDay >= 1 && trialDay <= 14 && selectedCustomer.status === 'active') {
+                    if (trialDay >= 1 && trialDay <= 14 && selectedCustomer.status === 'active' && !selectedCustomer.is_manual_pro) {
                       return (
                         <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
                           <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4" /> Período de Teste</span>

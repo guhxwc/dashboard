@@ -258,6 +258,8 @@ const realSupabaseService = {
         waitlist_date: waitlistRecord?.created_at,
         trial_ends_at: p.trial_ends_at,
         trial_start_date: p.subscription_date || p.created_at,
+        is_manual_pro: p.is_pro === true,
+        pro_granted_at: p.pro_granted_at,
       };
     }) as Customer[];
 
@@ -768,9 +770,19 @@ const realSupabaseService = {
       return { success: false, message: error.message || 'Erro ao processar solicitação' };
     }
 
+    if (data?.success) {
+      // Atualiza a data de concessão manual no profile
+      await supabase
+        .from('profiles')
+        .update({ 
+          pro_granted_at: action === 'grant' ? new Date().toISOString() : null 
+        })
+        .eq('id', userId);
+    }
+
     return { 
-      success: data.success, 
-      message: data.message || (data.success ? 'Operação realizada com sucesso' : 'Falha na operação') 
+      success: data?.success || false, 
+      message: data?.message || (data?.success ? 'Operação realizada com sucesso' : 'Falha na operação') 
     };
   },
 
