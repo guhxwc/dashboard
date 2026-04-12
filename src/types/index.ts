@@ -29,6 +29,7 @@ export interface Customer {
   waitlist_date?: string;
   trial_ends_at?: string;
   trial_start_date?: string;
+  subscription_end_date?: string;
   is_manual_pro?: boolean;
   pro_granted_at?: string;
 }

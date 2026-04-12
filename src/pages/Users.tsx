@@ -41,6 +41,32 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
+  const getSubscriptionProgress = (customer: Customer) => {
+    if (customer.status !== 'active' && customer.status !== 'tester') return null;
+
+    const startDate = new Date(customer.trial_start_date || customer.created_at);
+    const endDate = customer.subscription_end_date || customer.trial_ends_at 
+      ? new Date(customer.subscription_end_date || customer.trial_ends_at!) 
+      : null;
+
+    let totalDays = 14; // Default trial
+    if (customer.plan === 'monthly') totalDays = 30;
+    if (customer.plan === 'annual') totalDays = 365;
+
+    // If we have a real end date, use it to calculate total days
+    if (endDate) {
+      totalDays = Math.max(differenceInDays(endDate, startDate), 1);
+    }
+
+    const currentDay = Math.min(Math.max(differenceInDays(new Date(), startDate) + 1, 1), totalDays);
+
+    return {
+      current: currentDay,
+      total: totalDays,
+      percent: (currentDay / totalDays) * 100
+    };
+  };
+
   useEffect(() => {
     setStatusFilter(initialStatus);
   }, [initialStatus]);
@@ -556,17 +582,28 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       }</span>
                     </span>
                     {(() => {
-                      if (customer.is_manual_pro) return null;
-                      const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
-                      if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
-                        return (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
-                            <Clock className="w-3 h-3" />
-                            Dia {trialDay}/14
-                          </span>
-                        );
-                      }
-                      return null;
+                      const progress = getSubscriptionProgress(customer);
+                      if (!progress) return null;
+                      
+                      return (
+                        <div className="mt-1 w-full max-w-[100px]">
+                          <div className="flex items-center justify-between text-[10px] mb-1">
+                            <span className="text-zinc-500 dark:text-zinc-400 font-medium">
+                              {progress.current.toString().padStart(2, '0')}/{progress.total.toString().padStart(2, '0')}
+                            </span>
+                            <span className="text-zinc-400">dias</span>
+                          </div>
+                          <div className="h-1 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                progress.percent > 90 ? 'bg-rose-500' : 
+                                progress.percent > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${progress.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
                     })()}
                   </div>
                   
@@ -632,17 +669,26 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         }</span>
                       </span>
                       {(() => {
-                        if (customer.is_manual_pro) return null;
-                        const trialDay = differenceInDays(new Date(), new Date(customer.trial_start_date || customer.created_at)) + 1;
-                        if (trialDay >= 1 && trialDay <= 14 && customer.status === 'active') {
-                          return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
+                        const progress = getSubscriptionProgress(customer);
+                        if (!progress) return null;
+                        
+                        return (
+                          <div className="flex flex-col items-end gap-1 min-w-[80px]">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                               <Clock className="w-3 h-3" />
-                              Dia {trialDay}/14
-                            </span>
-                          );
-                        }
-                        return null;
+                              {progress.current.toString().padStart(2, '0')}/{progress.total.toString().padStart(2, '0')}
+                            </div>
+                            <div className="h-1.5 w-20 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200/50 dark:border-zinc-700/30">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  progress.percent > 90 ? 'bg-rose-500' : 
+                                  progress.percent > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                                }`}
+                                style={{ width: `${progress.percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
                       })()}
                     </div>
                   </td>
@@ -830,14 +876,25 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       );
                     }
 
-                    const trialDay = differenceInDays(new Date(), new Date(selectedCustomer.trial_start_date || selectedCustomer.created_at)) + 1;
-                    if (trialDay >= 1 && trialDay <= 14 && selectedCustomer.status === 'active' && !selectedCustomer.is_manual_pro) {
+                    const progress = getSubscriptionProgress(selectedCustomer);
+                    if (progress) {
                       return (
-                        <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
-                          <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4" /> Período de Teste</span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-800/30">
-                            Dia {trialDay} de 14
-                          </span>
+                        <div className="py-3 border-b border-zinc-100 dark:border-zinc-800">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4" /> Progresso da Assinatura</span>
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                              Dia {progress.current} de {progress.total}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                progress.percent > 90 ? 'bg-rose-500' : 
+                                progress.percent > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${progress.percent}%` }}
+                            />
+                          </div>
                         </div>
                       );
                     }
