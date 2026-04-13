@@ -198,7 +198,7 @@ const realSupabaseService = {
           stripe_customer_id: s.stripe_customer_id,
           plan_amount: s.plan_amount,
           subscription_date: s.created_at,
-          subscription_end_date: s.current_period_end || s.subscription_end_date || s.ends_at,
+          subscription_end_date: s.current_period_end || s.subscription_end_date || s.cancel_at || s.ends_at,
           plan: s.plan || s.plan_name || (s.plan_amount > 100 ? 'annual' : 'monthly'),
           affiliate_id: s.affiliate_id,
           has_subscription: true
@@ -288,7 +288,7 @@ const realSupabaseService = {
         waitlist_date: waitlistRecord?.created_at,
         trial_ends_at: p.trial_ends_at,
         trial_start_date: p.subscription_date || p.created_at,
-        subscription_end_date: p.subscription_end_date,
+        subscription_end_date: p.subscription_end_date || p.pro_expires_at,
         is_manual_pro: p.is_pro === true,
         pro_granted_at: p.pro_granted_at,
       };
