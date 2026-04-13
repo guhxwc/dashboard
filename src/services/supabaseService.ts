@@ -237,18 +237,11 @@ const realSupabaseService = {
       const subStatus = (p.subscription_status || p.status || p.plan_status || p.stripe_status || '').toLowerCase();
       const planName = (p.plan || p.plan_name || p.subscription_plan || '').toLowerCase();
       
-      const isPro = p.is_pro === true || 
-                    p.is_pro === 'true' ||
-                    subStatus === 'active' || 
-                    subStatus === 'succeeded' || 
-                    subStatus === 'paid' || 
-                    subStatus === 'pro' ||
-                    subStatus === 'premium' ||
-                    planName === 'pro' ||
-                    planName === 'premium' ||
-                    planName === 'annual' ||
-                    planName === 'monthly' ||
-                    (p.subscription_status && p.subscription_status !== 'free' && p.subscription_status !== 'canceled' && p.subscription_status !== 'past_due');
+      // isPro baseia-se apenas em is_pro e subscription_status
+      // NAO usar planName pois um usuario cancelado pode ter plan='monthly' salvo
+      const isPro = (p.is_pro === true || p.is_pro === 'true') &&
+                    subStatus !== 'canceled' &&
+                    subStatus !== 'past_due';
       
       const isTester = p.is_tester === true || p.is_tester === 'true';
       
