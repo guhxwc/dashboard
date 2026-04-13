@@ -45,19 +45,21 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     if (customer.status !== 'active' && customer.status !== 'tester') return null;
 
     const startDate = new Date(customer.trial_start_date || customer.created_at);
-    const endDate = customer.subscription_end_date || customer.trial_ends_at 
-      ? new Date(customer.subscription_end_date || customer.trial_ends_at!) 
-      : null;
 
-    let totalDays = 14; // Default trial
+    // Usa data real de expiração do banco
+    const rawEnd = customer.subscription_end_date || customer.trial_ends_at;
+    const endDate = rawEnd ? new Date(rawEnd) : null;
+
+    let totalDays = 14; // beta padrão
     if (customer.plan === 'monthly') totalDays = 30;
     if (customer.plan === 'annual') totalDays = 365;
 
-    // If we have a real end date, use it to calculate total days
+    // Se tem data real, calcula o total de dias do plano por ela
     if (endDate) {
       totalDays = Math.max(differenceInDays(endDate, startDate), 1);
     }
 
+    // Dia atual = quantos dias já passaram (formato "dia X/total")
     const currentDay = Math.min(Math.max(differenceInDays(new Date(), startDate) + 1, 1), totalDays);
 
     return {
