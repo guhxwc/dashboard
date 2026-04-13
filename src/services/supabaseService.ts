@@ -197,9 +197,9 @@ const realSupabaseService = {
           subscription_status: s.status,
           stripe_customer_id: s.stripe_customer_id,
           plan_amount: s.plan_amount,
-          subscription_date: s.created_at,
+          subscription_date: s.subscription_date || s.created_at,
           subscription_end_date: s.current_period_end || s.subscription_end_date || s.cancel_at || s.ends_at,
-          plan: s.plan || s.plan_name || (s.plan_amount > 100 ? 'annual' : 'monthly'),
+          plan: s.plan || s.plan_name || (s.plan_amount > 100 ? 'annual' : (s.plan_amount === 0 ? 'beta' : 'monthly')),
           affiliate_id: s.affiliate_id,
           has_subscription: true
         };

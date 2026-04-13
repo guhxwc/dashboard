@@ -18,7 +18,7 @@ export interface Customer {
   ltv: number;
   last_login?: string;
   current_streak?: number;
-  plan?: 'monthly' | 'annual';
+  plan?: 'monthly' | 'annual' | 'beta';
   stripe_customer_id?: string;
   subscription?: any;
   initial_weight?: number;

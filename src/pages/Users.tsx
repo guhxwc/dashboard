@@ -50,9 +50,10 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     const rawEnd = customer.subscription_end_date || customer.trial_ends_at;
     const endDate = rawEnd ? new Date(rawEnd) : null;
 
-    let totalDays = 14; // beta padrão
+    let totalDays = 14; // beta / padrão
     if (customer.plan === 'monthly') totalDays = 30;
     if (customer.plan === 'annual') totalDays = 365;
+    if (customer.plan === 'beta') totalDays = 14;
 
     // Se tem data real, calcula o total de dias do plano por ela
     if (endDate) {
