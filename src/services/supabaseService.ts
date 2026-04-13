@@ -597,10 +597,15 @@ const realSupabaseService = {
 
     const activeUsersCount = activeAtEndCustomers.length;
     
-    // Calcula o MRR baseado na fonte mais confiável (customers array tem o LTV que mapeia para o plan_amount)
+    // Calcula o MRR baseado no plano real de cada usuario
     let mrr = 0;
     activeAtEndCustomers.forEach(c => {
-      mrr += (c.ltv || 49.90);
+      if (c.plan === 'annual') {
+        // Plano anual: divide o valor anual por 12 para obter MRR
+        mrr += (c.ltv || 299.00) / 12;
+      } else {
+        mrr += (c.ltv || 49.90);
+      }
     });
 
     const arr = mrr * 12;
@@ -664,7 +669,7 @@ const realSupabaseService = {
     const stableChurnForLtv = Math.max(monthlyChurnEquivalent, 0.5); // Minimum 0.5% for LTV safety
     
     // CAC & LTV
-    const cac = 45.00; // Estimated acquisition cost
+    const cac = 0; // CAC real: sem dados de custo de aquisição ainda
     const arpu = activeUsers > 0 ? mrr / activeUsers : 49.90;
     const ltv = arpu / (Math.max(stableChurnForLtv, 0.1) / 100);
     
