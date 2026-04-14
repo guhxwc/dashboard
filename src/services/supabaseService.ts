@@ -46,7 +46,7 @@ const realSupabaseService = {
     // 1. Busca referrals: user_id -> affiliate_ref (código do afiliado)
     const { data: referrals } = await supabase
       .from('referrals')
-      .select('user_id, affiliate_ref, status');
+      .select('user_id, affiliate_ref, status, created_at');
     
     const referralMap = new Map<string, { ref: string; status: string }>();
     if (referrals) {
@@ -218,6 +218,20 @@ const realSupabaseService = {
             email: w.email,
             created_at: w.created_at,
             source_table: 'waitlist_only'
+          });
+        }
+      });
+    }
+
+    // 5. Processa referrals (Garante que usuários indicados apareçam mesmo sem profile completo)
+    if (referrals) {
+      referrals.forEach((r: any) => {
+        const existing = allUsersMap.get(r.user_id);
+        if (!existing) {
+          allUsersMap.set(r.user_id, {
+            id: r.user_id,
+            source_table: 'referrals_only',
+            created_at: r.created_at || new Date().toISOString()
           });
         }
       });
@@ -841,10 +855,11 @@ const realSupabaseService = {
   },
 
   getAdminReferrals: async (): Promise<any[]> => {
-    // Busca referrals e faz join com profiles em memória para evitar problemas de foreign key
-    const [referralsRes, profilesRes] = await Promise.all([
+    // Busca referrals e faz join com profiles e fitmind_users_view em memória
+    const [referralsRes, profilesRes, usersViewRes] = await Promise.all([
       supabase.from('referrals').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, email')
+      supabase.from('profiles').select('id, name, email'),
+      supabase.from('fitmind_users_view').select('id, raw_user_meta_data, email')
     ]);
 
     if (referralsRes.error) {
@@ -852,14 +867,32 @@ const realSupabaseService = {
       return [];
     }
 
-    const profilesMap = new Map<string, any>();
+    const userMap = new Map<string, any>();
+    
+    // Primeiro popula com a view (auth users)
+    if (usersViewRes.data) {
+      usersViewRes.data.forEach(u => {
+        const metadata = u.raw_user_meta_data || {};
+        const name = metadata.full_name || metadata.name || metadata.display_name || (u.email ? u.email.split('@')[0] : 'Usuário');
+        userMap.set(u.id, { id: u.id, name, email: u.email });
+      });
+    }
+
+    // Depois sobrescreve com profiles (mais atualizado se existir)
     if (profilesRes.data) {
-      profilesRes.data.forEach(p => profilesMap.set(p.id, p));
+      profilesRes.data.forEach(p => {
+        const existing = userMap.get(p.id);
+        userMap.set(p.id, { 
+          id: p.id, 
+          name: p.name || existing?.name || 'Usuário', 
+          email: p.email || existing?.email || '' 
+        });
+      });
     }
 
     return (referralsRes.data || []).map(ref => ({
       ...ref,
-      user: profilesMap.get(ref.user_id) || null
+      user: userMap.get(ref.user_id) || null
     }));
   }
 };
