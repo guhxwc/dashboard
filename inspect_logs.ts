@@ -5,9 +5,8 @@ dotenv.config();
 const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 async function inspect() {
-  const { data: profiles } = await supabase.from('profiles').select('*').limit(5);
-  console.log('profiles columns:', profiles && profiles.length > 0 ? Object.keys(profiles[0]) : 'No profiles');
-  console.log('profiles data:', profiles);
+  const { data: dailyLogs } = await supabase.from('daily_goals_met').select('*').order('date', { ascending: false }).limit(10);
+  console.log('daily_goals_met data:', dailyLogs);
 }
 
 inspect();

@@ -2,7 +2,7 @@ import { useState, useMemo, ReactNode } from 'react';
 import { Customer, DailyLog } from '@/types';
 import { ArrowLeft, Info, Target, Droplets, Dumbbell, Flame, Calendar, TrendingUp, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface UserMetricsViewProps {
@@ -48,10 +48,34 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
     const seed = customer.id.length;
     let currentStreak = 0;
     
+    // Pré-calcula a ofensiva antes da janela de 30 dias (usando os logs de 90 dias)
+    if (usingRealData) {
+      const thirtyDaysAgoStr = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+      const olderLogs = dailyLogs
+        .filter(l => l.user_id === customer.id && l.date < thirtyDaysAgoStr)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+      if (olderLogs.length > 0) {
+        let expectedDate = format(subDays(new Date(), 31), 'yyyy-MM-dd');
+        if (olderLogs[0].date === expectedDate) {
+          for (const l of olderLogs) {
+            if (l.date === expectedDate) {
+              currentStreak++;
+              expectedDate = format(subDays(parseISO(expectedDate), 1), 'yyyy-MM-dd');
+            } else if (l.date > expectedDate) {
+              continue;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+    }
+    
     for (let i = 30; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'dd/MM', { locale: ptBR });
-      const isoDateStr = date.toISOString().split('T')[0];
+      const isoDateStr = format(date, 'yyyy-MM-dd');
       
       if (usingRealData) {
         const log = dailyLogs.find(l => l.user_id === customer.id && l.date === isoDateStr);
@@ -60,10 +84,14 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
         const water = log?.water_met ? 1 : 0;
         const workout = log?.workout_met ? 1 : 0;
         
-        if (protein || water || workout) {
+        // Se existe um log para o dia, a ofensiva continua
+        if (log) {
           currentStreak++;
         } else {
-          currentStreak = 0;
+          // Se for hoje e não tem log, não zera a ofensiva (o dia ainda não acabou)
+          if (i !== 0) {
+            currentStreak = 0;
+          }
         }
         
         data.push({
@@ -83,7 +111,7 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
         const water = isActive && (daySeed % 10) < 7 ? 1 : 0;
         const workout = isActive && (daySeed % 10) < 4 ? 1 : 0;
         
-        if (protein || water || workout) {
+        if (isActive) {
           currentStreak++;
         } else {
           currentStreak = 0;
@@ -108,6 +136,7 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
   const proteinDays = historicalData.filter(d => d.protein).length;
   const waterDays = historicalData.filter(d => d.water).length;
   const workoutDays = historicalData.filter(d => d.workout).length;
+  const currentStreak = historicalData[historicalData.length - 1]?.streak || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -124,14 +153,22 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
           </div>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">{customer.name}</h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{customer.email}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{customer.email}</p>
+              {currentStreak > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold">
+                  <Flame className="w-3 h-3" /> {currentStreak} dias
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Top Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard title="Consistência (30d)" value={`${consistency}%`} subtitle={`${totalActiveDays} dias ativos`} icon={<Calendar className="w-5 h-5" />} color="blue" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Consistência (30d)'])} />
+        <MetricCard title="Ofensiva Atual" value={`${currentStreak}d`} subtitle="Dias seguidos" icon={<Flame className="w-5 h-5" />} color="amber" />
         <MetricCard title="Proteína" value={`${proteinDays}d`} subtitle="Metas batidas" icon={<Target className="w-5 h-5" />} color="rose" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Proteína'])} />
         <MetricCard title="Água" value={`${waterDays}d`} subtitle="Metas batidas" icon={<Droplets className="w-5 h-5" />} color="cyan" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Água'])} />
         <MetricCard title="Treino" value={`${workoutDays}d`} subtitle="Dias de treino" icon={<Dumbbell className="w-5 h-5" />} color="purple" onInfoClick={() => setSelectedMetricInfo(userMetricsDictionary['Treino'])} />
@@ -223,6 +260,7 @@ function MetricCard({ title, value, subtitle, icon, color, onInfoClick }: { titl
     rose: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20',
     purple: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20',
     cyan: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20',
+    amber: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20',
   }[color] || 'text-zinc-600 bg-zinc-50';
 
   return (

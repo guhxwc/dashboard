@@ -10,6 +10,7 @@ interface AppMetricsViewProps {
   customers: Customer[];
   dailyLogs?: DailyLog[];
   usingRealData?: boolean;
+  usageData?: any[];
 }
 
 const appMetricsDictionary: Record<string, { title: string; meaning: string; importance: string; howToUse: string }> = {
@@ -63,7 +64,7 @@ const appMetricsDictionary: Record<string, { title: string; meaning: string; imp
   }
 };
 
-export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealData = false }: AppMetricsViewProps) {
+export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealData = false, usageData = [] }: AppMetricsViewProps) {
   const [selectedMetricInfo, setSelectedMetricInfo] = useState<{ title: string; meaning: string; importance: string; howToUse: string } | null>(null);
 
   // Generate historical data for the charts (real or mock)
@@ -72,7 +73,7 @@ export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealDat
     for (let i = 30; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'dd/MM', { locale: ptBR });
-      const isoDateStr = date.toISOString().split('T')[0];
+      const isoDateStr = format(date, 'yyyy-MM-dd');
       
       if (usingRealData) {
         // Filter logs for this specific date
@@ -83,10 +84,12 @@ export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealDat
         
         // Se for hoje, inclui também quem fez login hoje mas não registrou metas
         if (i === 0) {
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
           const loggedInToday = customers.filter(c => {
             if (!c.last_login) return false;
             try {
-              return isSameDay(parseISO(c.last_login), date);
+              const lastLoginStr = format(parseISO(c.last_login), 'yyyy-MM-dd');
+              return lastLoginStr === todayStr;
             } catch (e) {
               return false;
             }
@@ -149,7 +152,13 @@ export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealDat
   const consistencyRate = Math.round(goalCompletionRate * 0.9); // Mock consistency or derived
   const adherenceRate = Math.round(usageRate * 0.8); // Mock adherence or derived
   
-  const avgStreak = Math.round(customers.reduce((acc, curr) => acc + (curr.current_streak || 0), 0) / (customers.length || 1));
+  let avgStreak = 0;
+  if (usageData && usageData.length > 0) {
+    avgStreak = Math.round(usageData.reduce((acc, curr) => acc + (curr.streak || 0), 0) / usageData.length);
+  } else {
+    // Se não temos usageData, tentamos calcular a média das ofensivas dos clientes
+    avgStreak = Math.round(customers.reduce((acc, curr) => acc + (curr.current_streak || 0), 0) / (customers.length || 1));
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

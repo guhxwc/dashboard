@@ -3,7 +3,7 @@ import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, DailyLog } from '@/types';
 import { Search, Activity, Users, Target, Droplets, Dumbbell, Flame, Database, Download, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { subDays, isToday, parseISO } from 'date-fns';
+import { subDays, isToday, parseISO, format } from 'date-fns';
 import { AppMetricsView } from '@/pages/AppMetricsView';
 import { UserMetricsView } from '@/pages/UserMetricsView';
 
@@ -37,9 +37,11 @@ export function AppUsage() {
 
         if (!isDemo) {
           const today = new Date();
-          const thirtyDaysAgo = subDays(today, 30).toISOString().split('T')[0];
-          const todayStr = today.toISOString().split('T')[0];
-          const logs = await supabaseService.getLogsByDateRange(thirtyDaysAgo, todayStr);
+          // Busca 90 dias para conseguir calcular ofensivas maiores
+          const ninetyDaysAgo = subDays(today, 90);
+          const ninetyDaysAgoStr = format(ninetyDaysAgo, 'yyyy-MM-dd');
+          const todayStr = format(today, 'yyyy-MM-dd');
+          const logs = await supabaseService.getLogsByDateRange(ninetyDaysAgoStr, todayStr);
           setDailyLogs(logs as DailyLog[]);
         }
       } catch (err) {
@@ -57,11 +59,48 @@ export function AppUsage() {
     return customers.map((customer, index) => {
       if (usingRealData) {
         // Use real data from Supabase
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
         const log = dailyLogs.find(l => l.user_id === customer.id && l.date === todayStr);
         
         // If they have a log today, they are active today
         const lastActive = log ? new Date().toISOString() : (customer.last_login || customer.created_at);
+
+        // Calculate streak dynamically from logs
+        let calculatedStreak = 0;
+        if (dailyLogs.length > 0) {
+          const userLogs = dailyLogs
+            .filter(l => l.user_id === customer.id)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          if (userLogs.length > 0) {
+            let currentStreak = 0;
+            const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+            
+            let expectedDate = todayStr;
+            // Se o log mais recente não for hoje nem ontem, a ofensiva acabou
+            if (userLogs[0].date !== todayStr && userLogs[0].date !== yesterdayStr) {
+              calculatedStreak = 0;
+            } else {
+              // Se o log mais recente for ontem, começamos a contar de ontem
+              if (userLogs[0].date === yesterdayStr && userLogs[0].date !== todayStr) {
+                expectedDate = yesterdayStr;
+              }
+              
+              for (const l of userLogs) {
+                if (l.date === expectedDate) {
+                  // Qualquer registro no dia conta como ofensiva
+                  currentStreak++;
+                  expectedDate = format(subDays(parseISO(expectedDate), 1), 'yyyy-MM-dd');
+                } else if (l.date > expectedDate) {
+                  continue;
+                } else {
+                  break;
+                }
+              }
+              calculatedStreak = currentStreak;
+            }
+          }
+        }
 
         return {
           customer,
@@ -69,7 +108,7 @@ export function AppUsage() {
           proteinGoal: log?.protein_met || false,
           waterGoal: log?.water_met || false,
           workoutCompleted: log?.workout_met || false,
-          streak: customer.current_streak || 0
+          streak: calculatedStreak
         };
       }
 
@@ -110,7 +149,9 @@ export function AppUsage() {
   const dauCount = usageData.filter(u => {
     if (!u.lastActive) return false;
     try {
-      return isToday(parseISO(u.lastActive));
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const lastActiveStr = format(parseISO(u.lastActive), 'yyyy-MM-dd');
+      return todayStr === lastActiveStr;
     } catch (e) {
       return false;
     }
@@ -152,6 +193,7 @@ export function AppUsage() {
         customers={customers}
         dailyLogs={dailyLogs}
         usingRealData={usingRealData}
+        usageData={usageData}
       />
     );
   }
@@ -291,7 +333,8 @@ export function AppUsage() {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {filteredData.slice(0, 100).map((usage) => { // Limit to 100 for performance in demo
-                const isToday = usage.lastActive.startsWith(new Date().toISOString().split('T')[0]);
+                const todayStr = format(new Date(), 'yyyy-MM-dd');
+                const isTodayActive = usage.lastActive.startsWith(todayStr);
                 return (
                   <tr 
                     key={usage.customer.id} 
@@ -314,9 +357,9 @@ export function AppUsage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
-                        isToday ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-400'
+                        isTodayActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-400'
                       }`}>
-                        {isToday && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+                        {isTodayActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
                         {new Date(usage.lastActive).toLocaleDateString('pt-BR')}
                       </span>
                     </td>
