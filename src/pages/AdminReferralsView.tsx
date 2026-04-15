@@ -171,7 +171,7 @@ export function AdminReferralsView() {
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
               <tr>
-                <th className="px-6 py-4 font-medium">Código de Indicação</th>
+                <th className="px-6 py-4 font-medium">Cupom / Código (affiliate_ref)</th>
                 <th className="px-6 py-4 font-medium text-center">Total de Indicações</th>
                 <th className="px-6 py-4 font-medium text-center">Ativos</th>
                 <th className="px-6 py-4 font-medium text-center">Pendentes</th>

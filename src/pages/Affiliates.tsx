@@ -434,11 +434,11 @@ export function AffiliatesPage() {
               <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
                 {/* Badge do código */}
                 <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase">Código:</span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase">Cupom/Código:</span>
                   <code className="font-mono text-sm font-semibold text-blue-600 dark:text-white">{selectedAffiliate.code}</code>
                   <button
                     onClick={() => copyToClipboard(selectedAffiliate.code, `code-${selectedAffiliate.id}`)}
-                    title="Copiar código"
+                    title="Copiar cupom"
                     className="ml-1 text-zinc-400 hover:text-blue-600 dark:hover:text-white"
                   >
                     {copiedCode === `code-${selectedAffiliate.id}` ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -534,6 +534,7 @@ export function AffiliatesPage() {
                       <tr>
                         <th className="px-6 py-3">Usuário</th>
                         <th className="px-6 py-3">Data de Entrada</th>
+                        <th className="px-6 py-3">Cupom Usado</th>
                         <th className="px-6 py-3">Status</th>
                         <th className="px-6 py-3 text-right">Valor Gerado</th>
                         <th className="px-6 py-3 text-right">Comissão</th>
@@ -543,11 +544,16 @@ export function AffiliatesPage() {
                       {selectedAffiliateData.customers.map((c: Customer) => (
                         <tr key={c.id} className="bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                           <td className="px-6 py-4">
-                            <div className="font-medium text-zinc-900 dark:text-white">{c.name}</div>
+                            <div className="font-medium text-zinc-900 dark:text-white">{c.name || 'Usuário Desconhecido'}</div>
                             {c.email && <div className="text-xs text-zinc-400 dark:text-zinc-500">{c.email}</div>}
                           </td>
                           <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
                             {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-300">
+                              {c.source}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <span className={clsx(
@@ -663,7 +669,7 @@ export function AffiliatesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Código de Referência
+                  Cupom / Código de Referência
                 </label>
                 <input
                   type="text"
@@ -674,9 +680,9 @@ export function AffiliatesPage() {
                   onChange={(e) => setNewAffiliate({ ...newAffiliate, code: e.target.value.toUpperCase().replace(/\s+/g, '') })}
                 />
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Link:{' '}
+                  Este é o <code className="font-mono">affiliate_ref</code> que será salvo na tabela <code className="font-mono">referrals</code>. Link:{' '}
                   <span className="font-mono text-blue-600 dark:text-white">
-                    {FITMIND_URL}/?ref={newAffiliate.code || 'CODIGO'}
+                    {FITMIND_URL}/?ref={newAffiliate.code || 'CUPOM'}
                   </span>
                 </p>
               </div>
