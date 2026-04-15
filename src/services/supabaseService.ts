@@ -200,7 +200,7 @@ const realSupabaseService = {
           subscription_date: s.subscription_date || s.created_at,
           subscription_end_date: s.current_period_end || s.subscription_end_date || s.cancel_at || s.ends_at,
           plan: s.plan || s.plan_name || (s.plan_amount > 100 ? 'annual' : (s.plan_amount === 0 ? 'beta' : 'monthly')),
-          affiliate_id: s.affiliate_id,
+          affiliate_id: s.affiliate_id || s.coupon || s.affiliate_ref || s.promo_code,
           has_subscription: true
         };
 
@@ -246,7 +246,10 @@ const realSupabaseService = {
 
     return finalUsers.map((p: any) => {
       const userId = p.id || p.user_id;
-      const referral = referralMap.get(userId) || (p.affiliate_id ? { ref: p.affiliate_id, status: 'active' } : null);
+      
+      // Tenta achar a origem (cupom/afiliado) em várias colunas possíveis
+      const possibleAffiliateId = p.affiliate_id || p.coupon || p.affiliate_ref || p.promo_code;
+      const referral = referralMap.get(userId) || (possibleAffiliateId ? { ref: possibleAffiliateId, status: 'active' } : null);
       
       const subStatus = (p.subscription_status || p.status || p.plan_status || p.stripe_status || '').toLowerCase();
       const planName = (p.plan || p.plan_name || p.subscription_plan || '').toLowerCase();
@@ -856,16 +859,12 @@ const realSupabaseService = {
 
   getAdminReferrals: async (): Promise<any[]> => {
     // Busca referrals e faz join com profiles e fitmind_users_view em memória
-    const [referralsRes, profilesRes, usersViewRes] = await Promise.all([
+    const [referralsRes, profilesRes, usersViewRes, subsRes] = await Promise.all([
       supabase.from('referrals').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, email'),
-      supabase.from('fitmind_users_view').select('id, raw_user_meta_data, email')
+      supabase.from('profiles').select('*'),
+      supabase.from('fitmind_users_view').select('id, raw_user_meta_data, email'),
+      supabase.from('subscriptions').select('user_id, affiliate_id, coupon, promo_code, affiliate_ref, created_at')
     ]);
-
-    if (referralsRes.error) {
-      console.error('Error fetching admin referrals:', referralsRes.error);
-      return [];
-    }
 
     const userMap = new Map<string, any>();
     
@@ -890,10 +889,56 @@ const realSupabaseService = {
       });
     }
 
-    return (referralsRes.data || []).map(ref => ({
-      ...ref,
-      user: userMap.get(ref.user_id) || null
-    }));
+    // Mapeia todas as indicações
+    const allReferralsMap = new Map<string, any>();
+
+    // 1. Adiciona da tabela oficial de referrals
+    if (referralsRes.data) {
+      referralsRes.data.forEach(ref => {
+        allReferralsMap.set(ref.user_id, {
+          ...ref,
+          user: userMap.get(ref.user_id) || null
+        });
+      });
+    }
+
+    // 2. Adiciona de profiles (se tiver cupom/affiliate_id e não estiver na tabela referrals)
+    if (profilesRes.data) {
+      profilesRes.data.forEach(p => {
+        const possibleRef = p.affiliate_id || p.coupon || p.affiliate_ref || p.promo_code;
+        if (possibleRef && !allReferralsMap.has(p.id)) {
+          allReferralsMap.set(p.id, {
+            id: `prof-${p.id}`,
+            user_id: p.id,
+            affiliate_ref: possibleRef,
+            status: 'active', // Assumimos active se veio do profile
+            created_at: p.created_at || new Date().toISOString(),
+            user: userMap.get(p.id) || null
+          });
+        }
+      });
+    }
+
+    // 3. Adiciona de subscriptions (se tiver cupom/affiliate_id e não estiver mapeado)
+    if (subsRes.data) {
+      subsRes.data.forEach(s => {
+        const possibleRef = s.affiliate_id || s.coupon || s.affiliate_ref || s.promo_code;
+        if (possibleRef && s.user_id && !allReferralsMap.has(s.user_id)) {
+          allReferralsMap.set(s.user_id, {
+            id: `sub-${s.user_id}`,
+            user_id: s.user_id,
+            affiliate_ref: possibleRef,
+            status: 'active',
+            created_at: s.created_at || new Date().toISOString(),
+            user: userMap.get(s.user_id) || null
+          });
+        }
+      });
+    }
+
+    return Array.from(allReferralsMap.values()).sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   }
 };
 
