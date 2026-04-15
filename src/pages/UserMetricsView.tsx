@@ -136,7 +136,7 @@ export function UserMetricsView({ onBack, customer, dailyLogs = [], usingRealDat
   const proteinDays = historicalData.filter(d => d.protein).length;
   const waterDays = historicalData.filter(d => d.water).length;
   const workoutDays = historicalData.filter(d => d.workout).length;
-  const currentStreak = historicalData[historicalData.length - 1]?.streak || 0;
+  const currentStreak = usingRealData ? (customer.current_streak || 0) : (historicalData[historicalData.length - 1]?.streak || 0);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

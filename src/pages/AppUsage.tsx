@@ -65,50 +65,13 @@ export function AppUsage() {
         // If they have a log today, they are active today
         const lastActive = log ? new Date().toISOString() : (customer.last_login || customer.created_at);
 
-        // Calculate streak dynamically from logs
-        let calculatedStreak = 0;
-        if (dailyLogs.length > 0) {
-          const userLogs = dailyLogs
-            .filter(l => l.user_id === customer.id)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          
-          if (userLogs.length > 0) {
-            let currentStreak = 0;
-            const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-            
-            let expectedDate = todayStr;
-            // Se o log mais recente não for hoje nem ontem, a ofensiva acabou
-            if (userLogs[0].date !== todayStr && userLogs[0].date !== yesterdayStr) {
-              calculatedStreak = 0;
-            } else {
-              // Se o log mais recente for ontem, começamos a contar de ontem
-              if (userLogs[0].date === yesterdayStr && userLogs[0].date !== todayStr) {
-                expectedDate = yesterdayStr;
-              }
-              
-              for (const l of userLogs) {
-                if (l.date === expectedDate) {
-                  // Qualquer registro no dia conta como ofensiva
-                  currentStreak++;
-                  expectedDate = format(subDays(parseISO(expectedDate), 1), 'yyyy-MM-dd');
-                } else if (l.date > expectedDate) {
-                  continue;
-                } else {
-                  break;
-                }
-              }
-              calculatedStreak = currentStreak;
-            }
-          }
-        }
-
         return {
           customer,
           lastActive,
           proteinGoal: log?.protein_met || false,
           waterGoal: log?.water_met || false,
           workoutCompleted: log?.workout_met || false,
-          streak: calculatedStreak
+          streak: customer.current_streak || 0
         };
       }
 

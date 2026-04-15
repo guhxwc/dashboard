@@ -287,7 +287,7 @@ const realSupabaseService = {
         created_at: p.created_at,
         ltv: status === 'tester' ? 0 : (isPro ? planAmount : 0),
         last_login: p.last_sign_in_at || p.last_active_at || p.created_at,
-        current_streak: p.current_streak || 0,
+        current_streak: p.streak || p.current_streak || 0,
         plan: p.plan || (planName === 'annual' ? 'annual' : 'monthly'),
         stripe_customer_id: p.stripe_customer_id,
         initial_weight: p.initial_weight,
