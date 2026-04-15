@@ -2,7 +2,7 @@ import { useState, useMemo, ReactNode } from 'react';
 import { Customer, DailyLog } from '@/types';
 import { ArrowLeft, Info, Activity, Users, Target, Droplets, Dumbbell, Flame, TrendingUp, Calendar, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, isSameDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface AppMetricsViewProps {
@@ -79,7 +79,23 @@ export function AppMetricsView({ onBack, customers, dailyLogs = [], usingRealDat
         const logsForDate = dailyLogs.filter(log => log.date === isoDateStr);
         
         // Calculate metrics based on real logs
-        const dau = logsForDate.length;
+        let dau = logsForDate.length;
+        
+        // Se for hoje, inclui também quem fez login hoje mas não registrou metas
+        if (i === 0) {
+          const loggedInToday = customers.filter(c => {
+            if (!c.last_login) return false;
+            try {
+              return isSameDay(parseISO(c.last_login), date);
+            } catch (e) {
+              return false;
+            }
+          });
+          
+          // O DAU real de hoje é o máximo entre os logs e os logins
+          dau = Math.max(dau, loggedInToday.length);
+        }
+        
         const protein = logsForDate.filter(log => log.protein_met).length;
         const water = logsForDate.filter(log => log.water_met).length;
         const workout = logsForDate.filter(log => log.workout_met).length;

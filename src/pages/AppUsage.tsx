@@ -3,7 +3,7 @@ import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, DailyLog } from '@/types';
 import { Search, Activity, Users, Target, Droplets, Dumbbell, Flame, Database, Download, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { subDays } from 'date-fns';
+import { subDays, isToday, parseISO } from 'date-fns';
 import { AppMetricsView } from '@/pages/AppMetricsView';
 import { UserMetricsView } from '@/pages/UserMetricsView';
 
@@ -108,8 +108,12 @@ export function AppUsage() {
 
   const activeCount = customers.length;
   const dauCount = usageData.filter(u => {
-    const today = new Date().toISOString().split('T')[0];
-    return u.lastActive.startsWith(today);
+    if (!u.lastActive) return false;
+    try {
+      return isToday(parseISO(u.lastActive));
+    } catch (e) {
+      return false;
+    }
   }).length;
 
   const handleExportCSV = () => {

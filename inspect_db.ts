@@ -5,15 +5,9 @@ dotenv.config();
 const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 async function inspect() {
-  const { data: profiles } = await supabase.from('profiles').select('*').limit(5);
-  console.log('Profiles columns:', profiles && profiles.length > 0 ? Object.keys(profiles[0]) : 'No profiles');
-  
-  const { data: subs } = await supabase.from('subscriptions').select('*').limit(5);
-  console.log('Subscriptions columns:', subs && subs.length > 0 ? Object.keys(subs[0]) : 'No subscriptions');
-  
-  const { data: refs } = await supabase.from('referrals').select('*').limit(5);
-  console.log('Referrals columns:', refs && refs.length > 0 ? Object.keys(refs[0]) : 'No referrals');
-  console.log('Referrals data:', refs);
+  const { data: usersView } = await supabase.from('fitmind_users_view').select('*').limit(5);
+  console.log('usersView columns:', usersView && usersView.length > 0 ? Object.keys(usersView[0]) : 'No usersView');
+  console.log('usersView data:', usersView);
 }
 
 inspect();
