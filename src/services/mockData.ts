@@ -250,7 +250,7 @@ export const mockService = {
       const mrr = TOTAL_ACTIVE_USERS * PLAN_PRICE;
       const activeUsers = TOTAL_ACTIVE_USERS;
       const churnRate = 5.2; 
-      const arpu = PLAN_PRICE + ((150 * UPSELL_PRICE) / TOTAL_ACTIVE_USERS); 
+      const arpu = PLAN_PRICE + ((150 * UPSELL_PRICE) / TOTAL_ACTIVE_USERS); // Average revenue per user including upsells
       const ltv = arpu / (churnRate / 100); 
       const cac = 42.00;
 
@@ -264,14 +264,6 @@ export const mockService = {
         activeUsers,
         totalUsers: activeUsers * 1.5,
         conversionRate: 15.5,
-        mrrMonthly: mrr * 0.7,
-        mrrAnnual: mrr * 0.3,
-        upsellCount: Math.floor(15 * multiplier),
-        upsellMrr: 15 * (197/12 - 49.9),
-        newCount: Math.floor(120 * multiplier),
-        newMrr: 120 * 49.9 * multiplier,
-        churnCount: Math.floor(30 * multiplier),
-        churnedMrr: 30 * 49.9 * multiplier,
         trafficSource: [
           { name: 'Victor Hugo', value: Math.floor(285 * multiplier) },
           { name: 'Allan Stachuk', value: Math.floor(142 * multiplier) },

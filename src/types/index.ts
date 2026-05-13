@@ -16,10 +16,7 @@ export interface Customer {
   created_at: string;
   source: string;
   ltv: number;
-  /** Melhor estimativa de último acesso: last_active_at > last_activity_date > last_sign_in_at */
   last_login?: string;
-  /** Última atividade real no app (daily_records) */
-  last_app_activity?: string;
   current_streak?: number;
   plan?: 'monthly' | 'annual' | 'beta';
   stripe_customer_id?: string;
@@ -35,10 +32,6 @@ export interface Customer {
   subscription_end_date?: string;
   is_manual_pro?: boolean;
   pro_granted_at?: string;
-  /** Valor mensal normalizado para MRR (anual ÷ 12) */
-  mrr_contribution?: number;
-  /** True se é assinante anual */
-  is_annual?: boolean;
 }
 
 export interface DailyLog {
@@ -114,16 +107,4 @@ export interface Metrics {
   totalUsers: number;
   conversionRate: number;
   trafficSource: { name: string; value: number }[];
-  // MRR breakdown por plano
-  mrrMonthly: number;
-  mrrAnnual: number;
-  // Upsell: usuários que foram de mensal → anual no período
-  upsellCount: number;
-  upsellMrr: number;
-  // Novos no período
-  newCount: number;
-  newMrr: number;
-  // Churn no período
-  churnCount: number;
-  churnedMrr: number;
 }

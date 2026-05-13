@@ -11,7 +11,6 @@ import { Transactions } from '@/pages/Transactions';
 import { AppUsage } from '@/pages/AppUsage';
 import { Jarvis } from '@/pages/Jarvis';
 import { Login } from '@/pages/Login';
-import { LeadsPage } from '@/pages/Leads';
 import { supabase } from '@/lib/supabase';
 
 function App() {
@@ -75,7 +74,6 @@ function App() {
       case 'metrics': return <Metrics />;
       case 'users': return <UsersPage initialStatus={usersFilter} onTabChange={handleTabChange} />;
       case 'app-usage': return <AppUsage />;
-      case 'leads': return <LeadsPage />;
       case 'affiliates': return <AffiliatesPage />;
       case 'transactions': return <Transactions />;
       case 'financials': return <Financials />;
