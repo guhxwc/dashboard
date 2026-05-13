@@ -553,7 +553,15 @@ const realSupabaseService = {
         activeUsers: activeProfileCount || 0,
         totalUsers: realUserCount || 0,
         conversionRate: 0,
-        trafficSource: []
+        trafficSource: [],
+        mrrMonthly: 0,
+        mrrAnnual: 0,
+        upsellCount: 0,
+        upsellMrr: 0,
+        newCount: 0,
+        newMrr: 0,
+        churnCount: 0,
+        churnedMrr: 0
       };
     }
 
@@ -753,6 +761,23 @@ const realSupabaseService = {
       trafficSource.push({ name: 'Direto / Outros', value: directCount });
     }
 
+    // MRR breakdown
+    let mrrMonthly = 0;
+    let mrrAnnual = 0;
+    activeAtEndCustomers.forEach(c => {
+      const contribution = c.plan === 'annual' ? (c.ltv || 299.00) / 12 : (c.ltv || 49.90);
+      if (c.plan === 'annual') mrrAnnual += contribution;
+      else mrrMonthly += contribution;
+    });
+
+    const newCount = newSubsInPeriod.length;
+    
+    const churnCount = totalCancellations;
+    const churnedMrr = churnCount * (arpu || 49.90);
+
+    const upsellCount = 0;
+    const upsellMrr = 0;
+
     return {
       mrr,
       arr,
@@ -763,7 +788,15 @@ const realSupabaseService = {
       activeUsers,
       totalUsers: realUserCount || 0,
       conversionRate,
-      trafficSource
+      trafficSource,
+      mrrMonthly,
+      mrrAnnual,
+      upsellCount,
+      upsellMrr,
+      newCount,
+      newMrr,
+      churnCount,
+      churnedMrr
     };
   },
 
@@ -858,28 +891,29 @@ const realSupabaseService = {
   },
 
   getAdminReferrals: async (): Promise<any[]> => {
-    // Busca referrals e faz join com profiles e fitmind_users_view em memória
+    // CORREÇÃO: removida query de subscriptions com colunas inexistentes
+    // (coupon, promo_code, affiliate_ref não existem na tabela subscriptions)
+    // Fonte correta: tabela referrals (affiliate_ref existe aqui)
     const [referralsRes, profilesRes, usersViewRes, subsRes] = await Promise.all([
       supabase.from('referrals').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*'),
+      supabase.from('profiles').select('id, name, email, created_at'),
       supabase.from('fitmind_users_view').select('id, raw_user_meta_data, email'),
-      supabase.from('subscriptions').select('user_id, affiliate_id, coupon, promo_code, affiliate_ref, created_at')
+      // subscriptions: apenas colunas que existem
+      supabase.from('subscriptions').select('user_id, affiliate_id, created_at')
     ]);
 
     const userMap = new Map<string, any>();
     
-    // Primeiro popula com a view (auth users)
     if (usersViewRes.data) {
-      usersViewRes.data.forEach(u => {
+      usersViewRes.data.forEach((u: any) => {
         const metadata = u.raw_user_meta_data || {};
         const name = metadata.full_name || metadata.name || metadata.display_name || (u.email ? u.email.split('@')[0] : 'Usuário');
         userMap.set(u.id, { id: u.id, name, email: u.email });
       });
     }
 
-    // Depois sobrescreve com profiles (mais atualizado se existir)
     if (profilesRes.data) {
-      profilesRes.data.forEach(p => {
+      profilesRes.data.forEach((p: any) => {
         const existing = userMap.get(p.id);
         userMap.set(p.id, { 
           id: p.id, 
@@ -889,12 +923,11 @@ const realSupabaseService = {
       });
     }
 
-    // Mapeia todas as indicações
     const allReferralsMap = new Map<string, any>();
 
-    // 1. Adiciona da tabela oficial de referrals
+    // 1. Fonte principal: tabela referrals (tem affiliate_ref)
     if (referralsRes.data) {
-      referralsRes.data.forEach(ref => {
+      referralsRes.data.forEach((ref: any) => {
         allReferralsMap.set(ref.user_id, {
           ...ref,
           user: userMap.get(ref.user_id) || null
@@ -902,27 +935,10 @@ const realSupabaseService = {
       });
     }
 
-    // 2. Adiciona de profiles (se tiver cupom/affiliate_id e não estiver na tabela referrals)
-    if (profilesRes.data) {
-      profilesRes.data.forEach(p => {
-        const possibleRef = p.affiliate_id || p.coupon || p.affiliate_ref || p.promo_code;
-        if (possibleRef && !allReferralsMap.has(p.id)) {
-          allReferralsMap.set(p.id, {
-            id: `prof-${p.id}`,
-            user_id: p.id,
-            affiliate_ref: possibleRef,
-            status: 'active', // Assumimos active se veio do profile
-            created_at: p.created_at || new Date().toISOString(),
-            user: userMap.get(p.id) || null
-          });
-        }
-      });
-    }
-
-    // 3. Adiciona de subscriptions (se tiver cupom/affiliate_id e não estiver mapeado)
+    // 2. Fallback: subscriptions com affiliate_id (único campo existente)
     if (subsRes.data) {
-      subsRes.data.forEach(s => {
-        const possibleRef = s.affiliate_id || s.coupon || s.affiliate_ref || s.promo_code;
+      subsRes.data.forEach((s: any) => {
+        const possibleRef = s.affiliate_id; // apenas affiliate_id existe
         if (possibleRef && s.user_id && !allReferralsMap.has(s.user_id)) {
           allReferralsMap.set(s.user_id, {
             id: `sub-${s.user_id}`,

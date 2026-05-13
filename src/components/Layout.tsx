@@ -1,5 +1,5 @@
 import { useState, ReactNode } from 'react';
-import { LayoutDashboard, Wallet, Users, PieChart, Menu, ChevronRight, BarChart3, LogOut, Sun, Moon, CreditCard, Activity, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, PieChart, Menu, ChevronRight, BarChart3, LogOut, Sun, Moon, CreditCard, Activity, Sparkles, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { isDemoMode, setDemoMode } from '@/services/supabaseService';
@@ -41,6 +41,7 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
     { id: 'metrics', label: 'Métricas', icon: BarChart3 },
     { id: 'users', label: 'Base de Usuários', icon: Users },
     { id: 'app-usage', label: 'Uso do App', icon: Activity },
+    { id: 'leads', label: 'CRM — Leads', icon: Target },
     { id: 'affiliates', label: 'Área de Afiliados', icon: Users },
     { id: 'transactions', label: 'Cobranças & Transações', icon: CreditCard },
     { id: 'financials', label: 'Financeiro', icon: Wallet },
