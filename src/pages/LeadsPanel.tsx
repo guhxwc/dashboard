@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Pagination } from '@/components/Pagination';
 
 type Lead = {
@@ -439,9 +440,9 @@ export function LeadsPanel() {
 
 
       {/* FILTERS & GOAL BAR */}
-      <div className="bg-white dark:bg-[#121214] p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800/80">
-        <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg w-full xl:w-auto overflow-x-auto hide-scrollbar">
+      <div className="bg-white dark:bg-[#121214] p-4 sm:p-5 rounded-[24px] shadow-md border border-zinc-100 dark:border-zinc-800/80">
+        <div className="flex flex-col xl:flex-row gap-5 justify-between items-start xl:items-center">
+          <div className="flex bg-zinc-100 dark:bg-zinc-800/40 p-1.5 rounded-xl w-full xl:w-auto overflow-x-auto hide-scrollbar scroll-smooth">
             {[
               { id: 'todos', label: 'Todos' },
               { id: 'sem_contato', label: 'Sem Contato' },
@@ -451,7 +452,7 @@ export function LeadsPanel() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2 sm:py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap flex-1 sm:flex-none ${
+                className={`px-5 py-2 sm:py-1.5 text-sm font-bold rounded-lg transition-all whitespace-nowrap flex-1 sm:flex-none ${
                   activeTab === tab.id 
                     ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' 
                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
@@ -462,21 +463,21 @@ export function LeadsPanel() {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
-            <div className="relative w-full sm:w-72 shrink-0">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <div className="relative w-full sm:w-80 shrink-0">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input 
                 type="text" 
                 placeholder="Buscar por nome, @ ou cidade..." 
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:bg-white dark:focus:bg-zinc-900 rounded-lg px-3 py-2.5 sm:py-1.5 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white transition-all shadow-sm"
+                className="w-full pl-10 border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 focus:bg-white dark:focus:bg-zinc-900 rounded-xl px-3 py-3 sm:py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none text-zinc-900 dark:text-white transition-all shadow-inner"
               />
             </div>
             
             <select 
               value={fCategoria} onChange={e => setFCategoria(e.target.value)}
-              className="w-full sm:w-auto border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2.5 sm:py-1.5 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all shadow-sm shrink-0"
+              className="w-full sm:w-auto border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl px-4 py-3 sm:py-2 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all shadow-inner cursor-pointer"
             >
               <option value="">Todas Categorias</option>
               <option value="Nutricionista">Nutricionista</option>
@@ -489,59 +490,88 @@ export function LeadsPanel() {
 
       {/* LISTA / TABLE */}
       {/* Mobile Card View */}
-      <div className="block lg:hidden space-y-3">
-        {filteredLeads.map(lead => {
-          const rProps = getResponsavelProps(lead.responsavel);
-          const sProps = getStatusProps(lead.status);
-          const isDelayed = lead.proximo_followup && lead.proximo_followup < HOJE_STR && (lead.status === 'abordado' || lead.status === 'em_conversa' || lead.status.includes('followup'));
-          
-          return (
-            <div 
-              key={lead.id}
-              onClick={() => setSelectedLead(lead)}
-              className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-4 shadow-sm relative overflow-hidden touch-manipulation"
-            >
-               {isDelayed && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />}
-               <div className="flex justify-between items-start mb-3">
-                 <div className="flex items-center gap-3">
-                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getCategoriaClasses(lead.categoria)}`}>
-                     {lead.nome.charAt(0).toUpperCase()}
+      <div className="block lg:hidden space-y-4">
+        <AnimatePresence mode="popLayout">
+          {filteredLeads.map((lead, index) => {
+            const rProps = getResponsavelProps(lead.responsavel);
+            const sProps = getStatusProps(lead.status);
+            const isDelayed = lead.proximo_followup && lead.proximo_followup < HOJE_STR && (lead.status === 'abordado' || lead.status === 'em_conversa' || lead.status.includes('followup'));
+            const classificacao = getClassificacaoProps(lead.classificacao);
+            
+            return (
+              <motion.div 
+                key={lead.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => setSelectedLead(lead)}
+                className="bg-white dark:bg-[#121214] border border-zinc-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-transform relative overflow-hidden touch-manipulation"
+              >
+                 {isDelayed && (
+                   <div className="absolute top-0 right-0 p-1.5 bg-red-500 text-white rounded-bl-xl">
+                     <AlertCircle className="w-3.5 h-3.5" />
                    </div>
-                   <div>
-                     <p className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-white">{lead.nome}</p>
-                     <p className="text-xs text-zinc-500 mt-0.5">{lead.instagram} • {lead.cidade}</p>
+                 )}
+                 
+                 <div className="flex items-start justify-between gap-4">
+                   <div className="flex items-center gap-4">
+                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm ${getCategoriaClasses(lead.categoria)}`}>
+                       {lead.nome.charAt(0).toUpperCase()}
+                     </div>
+                     <div className="min-w-0">
+                       <h3 className="font-bold text-lg leading-tight text-zinc-900 dark:text-white truncate pr-2">{lead.nome}</h3>
+                       <div className="flex items-center gap-2 mt-1">
+                          <span className="text-zinc-500 text-sm truncate">{lead.instagram}</span>
+                          <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                          <span className="text-zinc-500 text-sm truncate">{lead.cidade}</span>
+                       </div>
+                     </div>
                    </div>
                  </div>
-                 <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${sProps.classes}`}>
-                      {sProps.label}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${getClassificacaoProps(lead.classificacao).classes}`}>
-                      {getClassificacaoProps(lead.classificacao).label}
-                    </span>
+
+                 <div className="flex flex-wrap gap-2 mt-5">
+                   <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 shadow-sm ${sProps.classes}`}>
+                     <div className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                     {sProps.label}
+                   </span>
+                   <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 shadow-sm ${classificacao.classes}`}>
+                      {classificacao.label === 'Quente' && <Flame className="w-3 h-3" />}
+                      {classificacao.label === 'Morno' && <ThermometerSun className="w-3 h-3" />}
+                      {classificacao.label === 'Frio' && <Snowflake className="w-3 h-3" />}
+                      {classificacao.label}
+                   </span>
                  </div>
-               </div>
-               
-               <div className="flex justify-between items-center text-xs pt-3 border-t border-zinc-100 dark:border-zinc-800 mt-1">
-                 <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${rProps.cor}`}>
-                      {rProps.inicial}
+
+                 <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-zinc-50 dark:border-zinc-800/50">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] lowercase text-zinc-400 font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Responsável</span>
+                      <div className="flex items-center gap-2">
+                         <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shadow-sm ${rProps.cor}`}>
+                          {rProps.inicial}
+                         </div>
+                         <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{lead.responsavel.charAt(0).toUpperCase() + lead.responsavel.slice(1)}</span>
+                      </div>
                     </div>
-                    {lead.proximo_followup ? (
-                      <span className={isDelayed ? 'text-red-500 font-semibold' : ''}>
-                        Fup: {formatDataCurta(lead.proximo_followup)}
+                    <div className="flex flex-col gap-1 items-end text-right">
+                      <span className="text-[10px] lowercase text-zinc-400 font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        {lead.proximo_followup ? 'Próximo Follow-up' : '1º Contato'}
                       </span>
-                    ) : (
-                      <span>1º Ct: {formatDataCurta(lead.data_1_contato)}</span>
-                    )}
+                      <span className={`text-sm font-bold ${isDelayed ? 'text-red-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                         {lead.proximo_followup ? formatDataCurta(lead.proximo_followup) : formatDataCurta(lead.data_1_contato)}
+                      </span>
+                    </div>
                  </div>
-                 <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
-                   Detalhes <ChevronRight className="w-3 h-3" />
-                 </span>
-               </div>
-            </div>
-          );
-        })}
+                 
+                 <div className="mt-5 flex items-center justify-center py-2 bg-zinc-50 dark:bg-zinc-800/20 rounded-xl">
+                    <span className="text-zinc-500 dark:text-zinc-400 text-xs font-bold flex items-center gap-2">
+                      Tocar para abrir detalhes <ChevronRight className="w-4 h-4 opacity-50" />
+                    </span>
+                 </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
         {filteredLeads.length === 0 && (
           <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-zinc-500 text-sm">
             Nenhum lead encontrado.
@@ -760,6 +790,19 @@ export function LeadsPanel() {
          </div>
       </div>
     </div>
+
+      {/* Floating Action Button for Mobile */}
+      <div className="lg:hidden fixed bottom-20 right-6 z-40">
+        <motion.button
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsNewLeadOpen(true)}
+          className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_8px_30px_rgb(37,99,235,0.4)] flex items-center justify-center"
+        >
+          <Plus className="w-8 h-8" />
+        </motion.button>
+      </div>
 
       {/* MODAL DETALHES */}
       {selectedLead && (
