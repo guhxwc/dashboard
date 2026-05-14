@@ -176,9 +176,9 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-auto h-screen bg-[#F8FAFC] dark:bg-[#0a0a0a] transition-colors">
-        <header className="h-16 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/50 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30 transition-all">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 min-w-0 overflow-auto h-screen bg-[#F8FAFC] dark:bg-[#0a0a0a] transition-colors relative">
+        <header className="h-14 lg:h-16 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/50 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30 transition-all">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 -ml-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 rounded-lg transition-colors"
@@ -191,7 +191,7 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 hidden md:block">
+            <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 block">
               {menuItems.find(i => i.id === activeTab)?.label}
             </h2>
           </div>
@@ -200,7 +200,7 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
             <div className="flex items-center gap-2 mr-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
+                className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors hidden sm:block"
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -234,24 +234,79 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
             <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-2 hidden md:block"></div>
 
             <div className="flex items-center gap-3 pl-2">
-              <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
                 <img src={session?.user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${session?.user?.user_metadata?.full_name || session?.user?.email || 'User'}&background=random`} alt="User" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-20">
+        <div className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full"
           >
             {children}
           </motion.div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav 
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-md border-t border-zinc-200/60 dark:border-zinc-800/50 z-40"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-center justify-between px-2 sm:px-6 h-16">
+          {[
+            { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
+            { id: 'jarvis', label: 'Jarvis', icon: Sparkles },
+            { id: 'metrics', label: 'Métricas', icon: BarChart3 },
+            { id: 'users', label: 'Usuários', icon: Users },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                className="flex flex-col items-center justify-center flex-1 h-full gap-1 pt-1"
+              >
+                <div className={cn(
+                  "p-1.5 rounded-full transition-colors",
+                  isActive ? "bg-zinc-100 dark:bg-zinc-800" : ""
+                )}>
+                  <Icon className={cn(
+                    "w-5 h-5",
+                    isActive ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium tracking-wide",
+                  isActive ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400"
+                )}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+          
+          {/* Menu Button */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 h-full gap-1 pt-1"
+          >
+            <div className="p-1.5 rounded-full transition-colors">
+              <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <span className="text-[10px] font-medium tracking-wide text-zinc-500 dark:text-zinc-400">
+              Menu
+            </span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
