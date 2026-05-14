@@ -25,6 +25,7 @@ export function AffiliatesPage() {
   const [usingRealData, setUsingRealData] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showIntegration, setShowIntegration] = useState(false);
+  const [selectedAffiliateTab, setSelectedAffiliateTab] = useState<'base' | 'consultancy'>('base');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [newAffiliate, setNewAffiliate] = useState<Partial<Affiliate>>({
@@ -151,6 +152,7 @@ export function AffiliatesPage() {
    */
   const getAffiliateData = (affiliate: Affiliate) => {
     const affiliateCode = affiliate.code.toUpperCase();
+    const isAllan = affiliateCode === 'ALLAN'; // Allan special case
 
     const affiliateCustomers = customers.filter((c) => {
       const src = (c.source || '').toUpperCase();
@@ -162,24 +164,63 @@ export function AffiliatesPage() {
       );
     });
 
-    const totalSales = affiliateCustomers.reduce((acc, c) => acc + (c.ltv || 0), 0);
-    const commission = totalSales * affiliate.commission_rate;
-    const totalReferrals = affiliateCustomers.length;
-    const proSubscribers = affiliateCustomers.filter(
-      (c) => c.status === 'active' && (c.ltv || 0) > 0
-    ).length;
-    const freeLeads = totalReferrals - proSubscribers;
+    let totalSales = 0;
+    let commission = 0;
+    const proSubscribers = affiliateCustomers.filter(c => c.status === 'active' && (c.ltv || 0) > 0);
+    const freeLeads = affiliateCustomers.length - proSubscribers.length;
+    
+    // Separate customers
+    const baseCustomers: Customer[] = [];
+    const consultancyCustomers: Customer[] = [];
+
+    affiliateCustomers.forEach(c => {
+      let baseLtv = c.ltv || 0;
+      let upsellLtv = 0;
+
+      if (c.is_consultancy) {
+        consultancyCustomers.push(c);
+        
+        // Approximate upsell LTV based on the plan if total LTV implies it
+        // Or assume minimum Base LTV is 49 is active
+        // But true LTV is just the sum of transactions
+        if (c.consultancy_plan === 'mensal') upsellLtv = 197;
+        else if (c.consultancy_plan === 'trimestral') upsellLtv = 561;
+        else if (c.consultancy_plan === 'semestral') upsellLtv = 981; // or whichever total value
+        else upsellLtv = 197; // fallback
+        
+        if (baseLtv > upsellLtv) {
+          baseLtv = baseLtv - upsellLtv;
+        } else {
+          baseLtv = 49;
+        }
+      }
+
+      baseCustomers.push(c);
+
+      totalSales += (baseLtv + upsellLtv);
+      
+      if (isAllan) {
+        commission += (baseLtv * 0.30) + (upsellLtv * 0.70);
+      } else {
+        // Normal affiliates only get commission on the base subscription
+        commission += (baseLtv * affiliate.commission_rate);
+      }
+    });
+
     const conversionRate =
-      totalReferrals > 0 ? (proSubscribers / totalReferrals) * 100 : 0;
+      affiliateCustomers.length > 0 ? (proSubscribers.length / affiliateCustomers.length) * 100 : 0;
 
     return {
-      count: totalReferrals,
-      proCount: proSubscribers,
+      count: affiliateCustomers.length,
+      proCount: proSubscribers.length,
       freeCount: freeLeads,
       conversionRate,
       totalSales,
       commission,
       customers: affiliateCustomers,
+      baseCustomers,
+      consultancyCustomers,
+      isAllan
     };
   };
 
@@ -517,125 +558,184 @@ export function AffiliatesPage() {
 
           {/* Tabela de usuários indicados */}
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-              <h3 className="font-semibold text-zinc-900 dark:text-white">Usuários Indicados</h3>
-              <span className="text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded-full">
-                {selectedAffiliateData.count} total
-              </span>
+            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <h3 className="font-semibold text-zinc-900 dark:text-white">Usuários Indicados</h3>
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded-full">
+                  {selectedAffiliateData.count} total
+                </span>
+              </div>
+              <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">
+                <button
+                  onClick={() => setSelectedAffiliateTab('base')}
+                  className={clsx(
+                    'px-3 py-1.5 text-xs font-medium rounded-md transition-all',
+                    selectedAffiliateTab === 'base'
+                      ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  )}
+                >
+                  Assinaturas ({selectedAffiliateData.baseCustomers.length})
+                </button>
+                <button
+                  onClick={() => setSelectedAffiliateTab('consultancy')}
+                  className={clsx(
+                    'px-3 py-1.5 text-xs font-medium rounded-md transition-all',
+                    selectedAffiliateTab === 'consultancy'
+                      ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  )}
+                >
+                  Consultoria ({selectedAffiliateData.consultancyCustomers.length})
+                </button>
+              </div>
             </div>
 
-            {selectedAffiliateData.count === 0 ? (
-              <div className="px-6 py-12 flex flex-col items-center text-center gap-2">
-                <TrendingUp className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
-                <p className="text-zinc-500 dark:text-zinc-400 font-medium">Nenhum usuário indicado ainda.</p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  Compartilhe o link <code className="font-mono bg-zinc-100 dark:bg-zinc-900 px-1 rounded">?ref={selectedAffiliate.code}</code> para começar a rastrear.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop Table */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
-                      <tr>
-                        <th className="px-6 py-3">Usuário</th>
-                        <th className="px-6 py-3">Data de Entrada</th>
-                        <th className="px-6 py-3">Cupom Usado</th>
-                        <th className="px-6 py-3">Status</th>
-                        <th className="px-6 py-3 text-right">Valor Gerado</th>
-                        <th className="px-6 py-3 text-right">Comissão</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {selectedAffiliateData.customers.map((c: Customer) => (
-                        <tr key={c.id} className="bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-zinc-900 dark:text-white">{c.name || 'Usuário Desconhecido'}</div>
-                            {c.email && <div className="text-xs text-zinc-400 dark:text-zinc-500">{c.email}</div>}
-                          </td>
-                          <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
-                            {new Date(c.created_at).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-300">
-                              {c.source}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={clsx(
-                              'px-2 py-1 rounded-full text-xs font-medium',
-                              c.status === 'active' && (c.ltv || 0) > 0
-                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                                : c.status === 'tester'
-                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                                : c.status === 'active'
-                                ? 'bg-blue-100 dark:bg-zinc-800 text-blue-700 dark:text-white'
-                                : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
-                            )}>
-                              {c.status === 'active' && (c.ltv || 0) > 0
-                                ? '✓ Pro'
-                                : c.status === 'tester'
-                                ? 'Tester'
-                                : c.status === 'active'
-                                ? 'Free'
-                                : 'Cancelado'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right text-zinc-900 dark:text-white">{formatCurrency(c.ltv || 0)}</td>
-                          <td className="px-6 py-4 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency((c.ltv || 0) * selectedAffiliate.commission_rate)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            {(() => {
+              const currentList = selectedAffiliateTab === 'base' 
+                ? selectedAffiliateData.baseCustomers 
+                : selectedAffiliateData.consultancyCustomers;
 
-                {/* Mobile Card List */}
-                <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {selectedAffiliateData.customers.map((c: Customer) => (
-                    <div key={c.id} className="p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium text-zinc-900 dark:text-white">{c.name}</div>
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(c.created_at).toLocaleDateString('pt-BR')}</div>
+              const getCustomerValue = (c: Customer) => {
+                let baseLtv = c.ltv || 0;
+                let upsellLtv = 0;
+                if(c.is_consultancy) {
+                    if (c.consultancy_plan === 'mensal') upsellLtv = 197;
+                    else if (c.consultancy_plan === 'trimestral') upsellLtv = 561;
+                    else if (c.consultancy_plan === 'semestral') upsellLtv = 981;
+                    else upsellLtv = 197;
+                    if (baseLtv > upsellLtv) baseLtv = baseLtv - upsellLtv;
+                    else baseLtv = 49;
+                }
+                return selectedAffiliateTab === 'base' ? baseLtv : upsellLtv;
+              };
+
+              const getCustomerCommission = (c: Customer) => {
+                const val = getCustomerValue(c);
+                if (selectedAffiliateData.isAllan) {
+                    return selectedAffiliateTab === 'base' ? val * 0.30 : val * 0.70;
+                }
+                // Other affiliates get Commission on Base, 0% on Consultancy
+                return selectedAffiliateTab === 'base' ? val * selectedAffiliate.commission_rate : 0;
+              };
+
+              if (currentList.length === 0) {
+                return (
+                  <div className="px-6 py-12 flex flex-col items-center text-center gap-2">
+                    <TrendingUp className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
+                    <p className="text-zinc-500 dark:text-zinc-400 font-medium">Nenhum usuário em {selectedAffiliateTab === 'base' ? 'assinaturas' : 'consultoria'}.</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      Compartilhe o link <code className="font-mono bg-zinc-100 dark:bg-zinc-900 px-1 rounded">?ref={selectedAffiliate.code}</code> para começar a rastrear.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-800/50">
+                        <tr>
+                          <th className="px-6 py-3">Usuário</th>
+                          <th className="px-6 py-3">Data de Entrada</th>
+                          <th className="px-6 py-3">Cupom Usado</th>
+                          <th className="px-6 py-3">Status</th>
+                          <th className="px-6 py-3 text-right">Extrato Gerado</th>
+                          <th className="px-6 py-3 text-right">Comissão</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {currentList.map((c: Customer) => (
+                          <tr key={c.id} className="bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-zinc-900 dark:text-white">{c.name || 'Usuário Desconhecido'}</div>
+                              {c.email && <div className="text-xs text-zinc-400 dark:text-zinc-500">{c.email}</div>}
+                            </td>
+                            <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
+                              {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-300">
+                                {c.source}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={clsx(
+                                'px-2 py-1 rounded-full text-xs font-medium',
+                                c.status === 'active' && (c.ltv || 0) > 0
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                  : c.status === 'tester'
+                                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                  : c.status === 'active'
+                                  ? 'bg-blue-100 dark:bg-zinc-800 text-blue-700 dark:text-white'
+                                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                              )}>
+                                {c.status === 'active' && (c.ltv || 0) > 0
+                                  ? '✓ Pro'
+                                  : c.status === 'tester'
+                                  ? 'Tester'
+                                  : c.status === 'active'
+                                  ? 'Free'
+                                  : 'Cancelado'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right text-zinc-900 dark:text-white">{formatCurrency(getCustomerValue(c))}</td>
+                            <td className="px-6 py-4 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(getCustomerCommission(c))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Card List */}
+                  <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {currentList.map((c: Customer) => (
+                      <div key={c.id} className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium text-zinc-900 dark:text-white">{c.name}</div>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(c.created_at).toLocaleDateString('pt-BR')}</div>
+                          </div>
+                          <span className={clsx(
+                            'px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight',
+                            c.status === 'active' && (c.ltv || 0) > 0
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                              : c.status === 'tester'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                              : c.status === 'active'
+                              ? 'bg-blue-100 dark:bg-zinc-800 text-blue-700 dark:text-white'
+                              : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                          )}>
+                            {c.status === 'active' && (c.ltv || 0) > 0
+                              ? 'Pro'
+                              : c.status === 'tester'
+                              ? 'Tester'
+                              : c.status === 'active'
+                              ? 'Free'
+                              : 'Cancelado'}
+                          </span>
                         </div>
-                        <span className={clsx(
-                          'px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight',
-                          c.status === 'active' && (c.ltv || 0) > 0
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                            : c.status === 'tester'
-                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                            : c.status === 'active'
-                            ? 'bg-blue-100 dark:bg-zinc-800 text-blue-700 dark:text-white'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
-                        )}>
-                          {c.status === 'active' && (c.ltv || 0) > 0
-                            ? 'Pro'
-                            : c.status === 'tester'
-                            ? 'Tester'
-                            : c.status === 'active'
-                            ? 'Free'
-                            : 'Cancelado'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                          Gasto: <span className="font-medium text-zinc-900 dark:text-white">{formatCurrency(c.ltv || 0)}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Comissão</div>
-                          <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency((c.ltv || 0) * selectedAffiliate.commission_rate)}
+                        <div className="flex justify-between items-end">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            Gasto: <span className="font-medium text-zinc-900 dark:text-white">{formatCurrency(getCustomerValue(c))}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Comissão</div>
+                            <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(getCustomerCommission(c))}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
