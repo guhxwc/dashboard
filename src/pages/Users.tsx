@@ -51,14 +51,12 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     const endDate = rawEnd ? new Date(rawEnd) : null;
 
     let totalDays = 14; // beta / padrão
-    if (customer.plan === 'monthly') totalDays = 30;
-    if (customer.plan === 'annual') totalDays = 365;
-    if (customer.plan === 'beta') totalDays = 14;
-
-    // Se tem data real, calcula o total de dias do plano por ela
-    if (endDate) {
-      totalDays = Math.max(differenceInDays(endDate, startDate), 1);
-    }
+    const plan = customer.plan?.toLowerCase() || '';
+    if (plan.includes('monthly') || plan.includes('mensal')) totalDays = 30;
+    else if (plan.includes('annual') || plan.includes('anual')) totalDays = 365;
+    else if (plan.includes('semestral')) totalDays = 180;
+    else if (plan.includes('quarter') || plan.includes('trimestral')) totalDays = 90;
+    else if (plan === 'beta') totalDays = 14;
 
     // Dia atual = quantos dias já passaram (formato "dia X/total")
     const currentDay = Math.min(Math.max(differenceInDays(new Date(), startDate) + 1, 1), totalDays);
