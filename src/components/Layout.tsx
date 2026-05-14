@@ -242,7 +242,7 @@ export function Layout({ children, activeTab, onTabChange, session }: LayoutProp
           </div>
         </header>
 
-        <div className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
+        <div className={`p-4 lg:p-8 mx-auto pb-24 lg:pb-8 w-full ${activeTab === 'leads' ? 'max-w-[100%]' : 'max-w-7xl'}`}>
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 10 }}
