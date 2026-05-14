@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight } from 'lucide-react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 
 type Lead = {
@@ -683,9 +683,9 @@ export function LeadsPanel() {
       
       </div> {/* FECHA O LADO ESQUERDO AQUI */}
 
-      {/* Lado Direito: Prioridades e Meta (agora pega toda a altura, do lado direito da tela) */}
-      <div className="xl:w-[380px] shrink-0 xl:sticky xl:top-6 flex flex-col h-auto xl:h-[calc(100vh-3rem)]">
-         <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col overflow-y-auto hide-scrollbar">
+      {/* Lado Direito: Prioridades e Meta (agora rola junto com o conteúdo) */}
+      <div className="xl:w-[380px] shrink-0 flex flex-col h-full">
+         <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col">
            <div className="flex items-center gap-2 mb-6 shrink-0">
              <AlertTriangle className="w-5 h-5 text-amber-500" />
              <h3 className="font-semibold text-zinc-900 dark:text-white tracking-tight">Atenções & Prioridades</h3>
@@ -720,7 +720,7 @@ export function LeadsPanel() {
              </div>
            )}
 
-           <div className="flex-1 flex flex-col space-y-3 pb-8">
+           <div className="flex-1 flex flex-col space-y-3 mb-6">
              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1 ml-1.5">Resolver Hoje</h4>
              {prioridades.map(p => (
                <div 
@@ -745,6 +745,19 @@ export function LeadsPanel() {
                  Tudo em dia!
                </div>
              )}
+           </div>
+
+           <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
+             <div className="bg-zinc-50 dark:bg-zinc-800/20 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 mb-0.5">Status Geral</p>
+                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Fila organizada</p>
+                </div>
+                <Sparkles className="w-5 h-5 text-blue-500" />
+             </div>
+             <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center mt-4">
+               Atualizado em tempo real • CRM V0
+             </p>
            </div>
          </div>
       </div>
