@@ -984,6 +984,28 @@ const realSupabaseService = {
     return { success: true, message: `Usuário ${isTester ? 'marcado como' : 'removido de'} tester com sucesso.` };
   },
 
+  manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
+    if (action === 'revoke') {
+      const { data, error } = await supabase
+        .from('consultations')
+        .update({ subscription_status: 'canceled', updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .select();
+
+      if (error) {
+        console.error('Error revoking consultancy:', error);
+        return { success: false, message: error.message || 'Erro ao revogar consultoria' };
+      }
+
+      if (!data || data.length === 0) {
+        return { success: false, message: 'Usuário não encontrado na tabela de consultoria.' };
+      }
+
+      return { success: true, message: 'Consultoria revogada com sucesso.' };
+    }
+    return { success: false, message: 'Ação não suportada.' };
+  },
+
   getAdminReferrals: async (): Promise<any[]> => {
     // Busca referrals e faz join com profiles e fitmind_users_view em memória
     const [referralsRes, profilesRes, usersViewRes, subsRes] = await Promise.all([
@@ -1129,6 +1151,16 @@ export const supabaseService = {
       });
     }
     return realSupabaseService.manageUserTester(userId, isTester);
+  },
+  manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
+    if (isDemoMode()) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ success: true, message: `[DEMO] Consultoria revogada com sucesso.` });
+        }, 1000);
+      });
+    }
+    return realSupabaseService.manageUserConsultancy(userId, action);
   },
   getAdminReferrals: async (): Promise<any[]> => {
     if (isDemoMode()) return [];

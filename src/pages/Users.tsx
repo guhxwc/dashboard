@@ -30,6 +30,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   // Pro Management State
   const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
   const [testerAction, setTesterAction] = useState<{ userId: string; isTester: boolean; name: string } | null>(null);
+  const [consultancyAction, setConsultancyAction] = useState<{ userId: string; action: 'revoke'; name: string } | null>(null);
   const [proReason, setProReason] = useState('');
   const [proLoading, setProLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -169,6 +170,42 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
       }
     } catch (err: any) {
       setToast({ message: err.message || 'Erro inesperado ao processar Tester', type: 'error' });
+    } finally {
+      setProLoading(false);
+    }
+  };
+
+  const handleManageConsultancy = async () => {
+    if (!consultancyAction) return;
+    
+    setProLoading(true);
+    try {
+      const result = await (supabaseService as any).manageUserConsultancy(consultancyAction.userId, consultancyAction.action);
+      
+      if (result.success) {
+        setToast({ message: result.message, type: 'success' });
+        setConsultancyAction(null);
+        
+        // Reload data to reflect changes
+        const [customersData, affiliatesData, transactionsData] = await Promise.all([
+          supabaseService.getCustomers(),
+          supabaseService.getAffiliates(),
+          supabaseService.getTransactions()
+        ]);
+        setCustomers(customersData);
+        setAffiliates(affiliatesData);
+        setTransactions(transactionsData);
+        
+        // Update selected customer if modal is open
+        if (selectedCustomer && selectedCustomer.id === consultancyAction.userId) {
+          const updated = customersData.find(c => c.id === consultancyAction.userId);
+          if (updated) setSelectedCustomer(updated);
+        }
+      } else {
+        setToast({ message: result.message, type: 'error' });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Erro inesperado ao processar Consultoria', type: 'error' });
     } finally {
       setProLoading(false);
     }
@@ -589,7 +626,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                         customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
                         customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                        customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                        customer.status === 'tester' ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400' :
                         'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                       <span className="capitalize">{
                         customer.status === 'active' ? 'Ativo' :
@@ -675,7 +712,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                           customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
                           customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                          customer.status === 'tester' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                          customer.status === 'tester' ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400' :
                           'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                         {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
                         {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
@@ -804,7 +841,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                                   setTesterAction({ userId: customer.id, isTester: true, name: customer.name });
                                   setActiveMenuId(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 transition-colors"
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/20 text-sky-600 dark:text-sky-400 transition-colors"
                               >
                                 <FlaskConical className="w-4 h-4" />
                                 Marcar como Tester
@@ -820,6 +857,19 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                               >
                                 <X className="w-4 h-4" />
                                 Remover de Tester
+                              </button>
+                            )}
+                            {customer.is_consultancy && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConsultancyAction({ userId: customer.id, action: 'revoke', name: customer.name });
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-600 dark:text-rose-400 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                                Revogar Consultoria
                               </button>
                             )}
                             <button
@@ -970,7 +1020,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         selectedCustomer.status === 'active' ? 'bg-emerald-500' : 
                         selectedCustomer.status === 'canceled' ? 'bg-zinc-400' : 
                         selectedCustomer.status === 'past_due' ? 'bg-rose-500' : 
-                        selectedCustomer.status === 'tester' ? 'bg-purple-500' : 'bg-amber-500'
+                        selectedCustomer.status === 'tester' ? 'bg-sky-500' : 'bg-amber-500'
                       }`}></span>
                       <span className="text-sm font-medium text-zinc-900 dark:text-white capitalize">
                         {selectedCustomer.status === 'active' ? 'Ativo' : 
@@ -1110,7 +1160,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   {selectedCustomer.status !== 'tester' ? (
                     <button
                       onClick={() => setTesterAction({ userId: selectedCustomer.id, isTester: true, name: selectedCustomer.name })}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+                      className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors text-sm font-medium"
                     >
                       <FlaskConical className="w-4 h-4" />
                       Marcar como Tester
@@ -1122,6 +1172,15 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                     >
                       <X className="w-4 h-4" />
                       Remover de Tester
+                    </button>
+                  )}
+                  {selectedCustomer.is_consultancy && (
+                    <button
+                      onClick={() => setConsultancyAction({ userId: selectedCustomer.id, action: 'revoke', name: selectedCustomer.name })}
+                      className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <X className="w-4 h-4" />
+                      Revogar Consultoria
                     </button>
                   )}
                 </div>
@@ -1208,7 +1267,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${testerAction.isTester ? 'bg-purple-100 text-purple-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${testerAction.isTester ? 'bg-sky-100 text-sky-600' : 'bg-zinc-100 text-zinc-600'}`}>
                   {testerAction.isTester ? <FlaskConical className="w-6 h-6" /> : <X className="w-6 h-6" />}
                 </div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
@@ -1232,13 +1291,56 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   onClick={handleManageTester}
                   disabled={proLoading}
                   className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
-                    testerAction.isTester ? 'bg-purple-600 hover:bg-purple-700' : 'bg-zinc-600 hover:bg-zinc-700'
+                    testerAction.isTester ? 'bg-sky-500 hover:bg-sky-600' : 'bg-zinc-600 hover:bg-zinc-700'
                   } disabled:opacity-50`}
                 >
                   {proLoading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     testerAction.isTester ? 'Confirmar' : 'Remover'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Consultancy Action Confirmation Modal */}
+      {consultancyAction && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-rose-100 text-rose-600`}>
+                  <X className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                  Revogar Consultoria
+                </h3>
+              </div>
+              
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Você está prestes a revogar a consultoria do usuário <strong>{consultancyAction.name}</strong>. Esta ação não pode ser desfeita e ele perderá o acesso e comunicação com a nutri.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConsultancyAction(null)}
+                  disabled={proLoading}
+                  className="flex-1 px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleManageConsultancy}
+                  disabled={proLoading}
+                  className={`flex-1 px-4 py-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50`}
+                >
+                  {proLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    'Confirmar'
                   )}
                 </button>
               </div>
