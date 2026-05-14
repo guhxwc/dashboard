@@ -356,7 +356,7 @@ export function LeadsPanel() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -385,53 +385,53 @@ export function LeadsPanel() {
       </div>
 
       {/* MAIN WRAPPER: Lado Esquerdo + Lado Direito */}
-      <div className="flex flex-col xl:flex-row gap-6 mb-8 items-start">
+      <div className="flex flex-col xl:flex-row gap-6 mb-8 items-start w-full">
         
         {/* LADO ESQUERDO: Greeting + Cards + Filters + Table */}
-        <div className="flex-1 flex flex-col space-y-6 min-w-0">
+        <div className="flex-1 flex flex-col space-y-6 min-w-0 w-full overflow-hidden">
 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
             {/* Card 1 */}
-            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
               <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-violet-50 dark:bg-violet-500/10">
                 <Users className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Total de Leads</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Total de Leads</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{totalLeads}</span>
               </div>
             </div>
 
             {/* Card 2 */}
-            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
               <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-blue-50 dark:bg-blue-500/10">
                 <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Em conversa</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Em conversa</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{emConversa}</span>
               </div>
             </div>
 
             {/* Card 3 */}
-            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
               <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-orange-50 dark:bg-orange-500/10">
                 <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Follow-ups hoje</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Follow-ups hoje</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{followupsHojeCount}</span>
               </div>
             </div>
 
             {/* Card 4 */}
-            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
               <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-emerald-50 dark:bg-emerald-500/10">
                 <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Parcerias fechadas</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Parcerias fechadas</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{fechados}</span>
               </div>
             </div>
@@ -440,8 +440,8 @@ export function LeadsPanel() {
 
 
       {/* FILTERS & GOAL BAR */}
-      <div className="bg-white dark:bg-[#121214] p-4 sm:p-5 rounded-[24px] shadow-md border border-zinc-100 dark:border-zinc-800/80">
-        <div className="flex flex-col xl:flex-row gap-5 justify-between items-start xl:items-center">
+      <div className="bg-white dark:bg-[#121214] p-3 sm:p-5 rounded-[24px] shadow-md border border-zinc-100 dark:border-zinc-800/80 w-full overflow-hidden">
+        <div className="flex flex-col xl:flex-row gap-5 justify-between items-start xl:items-center w-full">
           <div className="flex bg-zinc-100 dark:bg-zinc-800/40 p-1.5 rounded-xl w-full xl:w-auto overflow-x-auto hide-scrollbar scroll-smooth">
             {[
               { id: 'todos', label: 'Todos' },
@@ -506,7 +506,7 @@ export function LeadsPanel() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => setSelectedLead(lead)}
-                className="bg-white dark:bg-[#121214] border border-zinc-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-transform relative overflow-hidden touch-manipulation"
+                className="bg-white dark:bg-[#121214] border border-zinc-100 dark:border-zinc-800 rounded-[28px] p-4 sm:p-5 shadow-sm active:scale-[0.98] transition-transform relative overflow-hidden touch-manipulation mx-0.5"
               >
                  {isDelayed && (
                    <div className="absolute top-0 right-0 p-1.5 bg-red-500 text-white rounded-bl-xl">
@@ -712,7 +712,7 @@ export function LeadsPanel() {
       </div> {/* FECHA O LADO ESQUERDO AQUI */}
 
       {/* Lado Direito: Prioridades e Meta (agora rola junto com o conteúdo) */}
-      <div className="xl:w-[380px] shrink-0 flex flex-col h-full">
+      <div className="w-full xl:w-[380px] shrink-0 flex flex-col h-full">
          <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col">
            <div className="flex items-center gap-2 mb-6 shrink-0">
              <AlertTriangle className="w-5 h-5 text-amber-500" />
