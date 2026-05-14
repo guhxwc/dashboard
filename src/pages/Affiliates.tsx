@@ -5,7 +5,7 @@ import { Customer, Affiliate } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import {
   Users, ArrowUpRight, Link as LinkIcon, Database, Plus, X, Copy, Check,
-  AlertCircle, ExternalLink, TrendingUp, ShoppingCart, Trash2
+  AlertCircle, ExternalLink, TrendingUp, ShoppingCart, Trash2, Edit2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,8 @@ export function AffiliatesPage() {
   const [selectedAffiliateId, setSelectedAffiliateId] = useState<string | 'all' | 'referrals'>('all');
   const [usingRealData, setUsingRealData] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAffiliate, setEditingAffiliate] = useState<Partial<Affiliate> | null>(null);
   const [showIntegration, setShowIntegration] = useState(false);
   const [selectedAffiliateTab, setSelectedAffiliateTab] = useState<'base' | 'consultancy'>('base');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -93,6 +95,33 @@ export function AffiliatesPage() {
     } catch (error: any) {
       console.error('Error creating affiliate:', error);
       setFormError(error.message || 'Erro ao criar afiliado. Verifique o console.');
+    }
+  };
+
+  const handleUpdateAffiliate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!editingAffiliate || !editingAffiliate.id || !editingAffiliate.name || !editingAffiliate.code) {
+      setFormError('Nome e Código são obrigatórios.');
+      return;
+    }
+
+    try {
+      await supabaseService.updateAffiliate(editingAffiliate.id, {
+        name: editingAffiliate.name,
+        email: editingAffiliate.email,
+        code: editingAffiliate.code.toUpperCase(),
+        discount_rate: editingAffiliate.discount_rate,
+        commission_rate: editingAffiliate.commission_rate,
+        pix_key: editingAffiliate.pix_key,
+      });
+      setIsEditModalOpen(false);
+      setEditingAffiliate(null);
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error updating affiliate:', error);
+      setFormError(error.message || 'Erro ao atualizar afiliado. Verifique o console.');
     }
   };
 
@@ -558,7 +587,17 @@ export function AffiliatesPage() {
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+            <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditingAffiliate(selectedAffiliate);
+                  setIsEditModalOpen(true);
+                }}
+                className="text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Editar Afiliado
+              </button>
               <button
                 onClick={() => {
                   if (window.confirm(`Excluir o afiliado ${selectedAffiliate.name}?`)) {
@@ -869,6 +908,116 @@ export function AffiliatesPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
                 >
                   Criar Afiliado
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Editar Afiliado ───────────────────────────────────── */}
+      {isEditModalOpen && editingAffiliate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md shadow-xl border border-zinc-200 dark:border-zinc-800">
+            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Editar Afiliado</h3>
+              <button onClick={() => setIsEditModalOpen(false)}>
+                <X className="w-5 h-5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateAffiliate} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nome do Parceiro</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="João Silva"
+                  value={editingAffiliate.name || ''}
+                  onChange={(e) => setEditingAffiliate({ ...editingAffiliate, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="joao@email.com"
+                  value={editingAffiliate.email || ''}
+                  onChange={(e) => setEditingAffiliate({ ...editingAffiliate, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Cupom / Código de Referência
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono"
+                  placeholder="JOAO10"
+                  value={editingAffiliate.code || ''}
+                  onChange={(e) => setEditingAffiliate({ ...editingAffiliate, code: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Desconto (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={((editingAffiliate.discount_rate || 0) * 100).toFixed(0)}
+                    onChange={(e) => setEditingAffiliate({ ...editingAffiliate, discount_rate: Number(e.target.value) / 100 })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Comissão (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={((editingAffiliate.commission_rate || 0) * 100).toFixed(0)}
+                    onChange={(e) => setEditingAffiliate({ ...editingAffiliate, commission_rate: Number(e.target.value) / 100 })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Chave PIX (opcional)</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="CPF, Email ou Chave Aleatória"
+                  value={editingAffiliate.pix_key || ''}
+                  onChange={(e) => setEditingAffiliate({ ...editingAffiliate, pix_key: e.target.value })}
+                />
+              </div>
+
+              {formError && (
+                <div className="flex items-center gap-2 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg text-rose-700 dark:text-rose-300 text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {formError}
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
+                >
+                  Salvar Alterações
                 </button>
               </div>
             </form>

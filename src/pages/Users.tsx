@@ -626,7 +626,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                         customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
                         customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                        customer.status === 'tester' ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400' :
+                        customer.status === 'tester' ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' :
                         'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                       <span className="capitalize">{
                         customer.status === 'active' ? 'Ativo' :
@@ -712,7 +712,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         ${customer.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
                           customer.status === 'canceled' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400' : 
                           customer.status === 'past_due' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' :
-                          customer.status === 'tester' ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400' :
+                          customer.status === 'tester' ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' :
                           'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
                         {customer.status === 'active' && <UserCheck className="w-3 h-3" />}
                         {customer.status === 'canceled' && <UserX className="w-3 h-3" />}
@@ -841,7 +841,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                                   setTesterAction({ userId: customer.id, isTester: true, name: customer.name });
                                   setActiveMenuId(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/20 text-sky-600 dark:text-sky-400 transition-colors"
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 transition-colors"
                               >
                                 <FlaskConical className="w-4 h-4" />
                                 Marcar como Tester
@@ -1020,7 +1020,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         selectedCustomer.status === 'active' ? 'bg-emerald-500' : 
                         selectedCustomer.status === 'canceled' ? 'bg-zinc-400' : 
                         selectedCustomer.status === 'past_due' ? 'bg-rose-500' : 
-                        selectedCustomer.status === 'tester' ? 'bg-sky-500' : 'bg-amber-500'
+                        selectedCustomer.status === 'tester' ? 'bg-slate-500' : 'bg-amber-500'
                       }`}></span>
                       <span className="text-sm font-medium text-zinc-900 dark:text-white capitalize">
                         {selectedCustomer.status === 'active' ? 'Ativo' : 
@@ -1160,7 +1160,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   {selectedCustomer.status !== 'tester' ? (
                     <button
                       onClick={() => setTesterAction({ userId: selectedCustomer.id, isTester: true, name: selectedCustomer.name })}
-                      className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors text-sm font-medium"
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/60 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
                     >
                       <FlaskConical className="w-4 h-4" />
                       Marcar como Tester
@@ -1267,7 +1267,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${testerAction.isTester ? 'bg-sky-100 text-sky-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${testerAction.isTester ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' : 'bg-zinc-100 text-zinc-600'}`}>
                   {testerAction.isTester ? <FlaskConical className="w-6 h-6" /> : <X className="w-6 h-6" />}
                 </div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
@@ -1291,7 +1291,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   onClick={handleManageTester}
                   disabled={proLoading}
                   className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
-                    testerAction.isTester ? 'bg-sky-500 hover:bg-sky-600' : 'bg-zinc-600 hover:bg-zinc-700'
+                    testerAction.isTester ? 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600' : 'bg-zinc-600 hover:bg-zinc-700'
                   } disabled:opacity-50`}
                 >
                   {proLoading ? (
