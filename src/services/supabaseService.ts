@@ -360,8 +360,19 @@ const realSupabaseService = {
 
       // Extract raw LTV from transactions (fallback to planAmount if missing/zero and user is active)
       let trueLtv = ltvMap.get(userId) || 0;
-      if (trueLtv === 0 && (isPro || (consultRecord && consultRecord.subscription_status === 'active')) && !isTester) {
-        trueLtv = planAmount > 0 ? planAmount : getMRRForAmountAndPlan(0, finalPlan);
+      if (trueLtv === 0 && !isTester) {
+        if (isPro || (consultRecord && consultRecord.subscription_status === 'active')) {
+          let ltvFallback = 0;
+          if (isPro) {
+            ltvFallback += (planAmount > 0 && planAmount !== 197 && planAmount !== 187 && planAmount !== 163.50) ? planAmount : 49.00;
+          }
+          if (consultRecord && consultRecord.subscription_status === 'active') {
+            if (!isPro) ltvFallback += 49.00; // Assumes they must have the base plan to have consultancy
+            ltvFallback += getMRRForAmountAndPlan(0, `consultoria_${consultRecord.plan_type || 'mensal'}`);
+          }
+          if (ltvFallback === 0) ltvFallback = planAmount;
+          trueLtv = ltvFallback;
+        }
       }
 
       return {
@@ -624,9 +635,17 @@ const realSupabaseService = {
     const endDateIso = endDate.toISOString();
 
     // Fetch aggregates
-    const { data: transactions } = await supabase.from('transactions').select('customer_id, amount, affiliate_id, created_at').gte('created_at', startDateIso).lte('created_at', endDateIso);
-    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id, status, plan_amount, created_at, updated_at, customer_email, stripe_customer_id');
-    const { data: affiliates } = await supabase.from('affiliates').select('code, name');
+    const [transRes, subsRes, affRes, consultsRes] = await Promise.all([
+      supabase.from('transactions').select('customer_id, amount, affiliate_id, created_at').gte('created_at', startDateIso).lte('created_at', endDateIso),
+      supabase.from('subscriptions').select('user_id, status, plan_amount, created_at, updated_at, customer_email, stripe_customer_id'),
+      supabase.from('affiliates').select('code, name'),
+      supabase.from('consultations').select('*')
+    ]);
+
+    const transactions = transRes.data || [];
+    const subscriptions = subsRes.data || [];
+    const affiliates = affRes.data || [];
+    const consultations = consultsRes.data || [];
     
     // Tenta pegar contagem real de usuários
     const customers = await supabaseService.getCustomers();
@@ -732,7 +751,7 @@ const realSupabaseService = {
 
     const activeAtStart = activeAtStartCustomers.length;
 
-    const canceledSubs = subscriptions.filter((s: any) => {
+    const canceledSubs = (subsRes.data || []).filter((s: any) => {
       // Exclude testers and admins
       const customer = customers.find(c => c.id === s.user_id);
       if (!customer || customer.status === 'tester') return false;
@@ -742,7 +761,16 @@ const realSupabaseService = {
         s.updated_at <= endDateIso;
     });
 
-    const recentCancellations = canceledSubs.length;
+    const canceledConsults = (consultsRes.data || []).filter((c: any) => {
+      const customer = customers.find(cust => cust.id === c.user_id);
+      if (!customer || customer.status === 'tester') return false;
+
+      return (c.subscription_status === 'canceled' || c.subscription_status === 'cancelled') && 
+        c.cancelled_at >= startDateIso && 
+        c.cancelled_at <= endDateIso;
+    });
+
+    const recentCancellations = canceledSubs.length + canceledConsults.length;
 
     // Also count manual revocations from admin_actions_log if table exists
     let manualRevocations = 0;
@@ -766,12 +794,11 @@ const realSupabaseService = {
 
     const totalCancellations = recentCancellations + manualRevocations;
     
-    // Use average active users as denominator for a more stable churn rate during growth
-    const avgActiveUsers = (activeAtStart + activeUsersCount) / 2;
-    const periodChurnRate = avgActiveUsers > 0 ? (totalCancellations / avgActiveUsers) * 100 : 0;
+    // For a real churn rate, we use active users at the START of the period
+    // This represents the percentage of existing customers who left
+    const periodChurnRate = activeAtStart > 0 ? (totalCancellations / activeAtStart) * 100 : 0;
     
     // Normalize Churn to Monthly (30 days) for LTV calculation
-    // If period is 7 days, monthly churn is roughly periodChurn * (30/7)
     const dayCount = Math.max(days, 1);
     const monthlyChurnEquivalent = (periodChurnRate / dayCount) * 30;
     
@@ -796,7 +823,8 @@ const realSupabaseService = {
     const newMrr = newSubsInPeriod.reduce((acc: number, curr: any) => acc + getMRRForAmountAndPlan(curr.plan_amount, curr.plan || curr.plan_name), 0);
     
     const canceledMrr = canceledSubs.reduce((acc: number, curr: any) => acc + getMRRForAmountAndPlan(curr.plan_amount, curr.plan || curr.plan_name), 0);
-    const lostMrr = canceledMrr + (manualRevocations * (mrr / (activeUsers || 1) || 49.00));
+    const canceledConsultancyMrr = canceledConsults.reduce((acc: number, curr: any) => acc + getMRRForAmountAndPlan(0, `consultoria_${curr.plan_type}`), 0);
+    const lostMrr = canceledMrr + canceledConsultancyMrr + (manualRevocations * (mrr / (activeUsers || 1) || 49.00));
     
     const netNewMrr = newMrr - lostMrr;
 

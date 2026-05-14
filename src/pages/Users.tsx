@@ -3,7 +3,7 @@ import { mockService } from '@/services/mockData';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, Affiliate, Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown } from 'lucide-react';
+import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown, DollarSign, Users } from 'lucide-react';
 import { subDays, isAfter, differenceInDays } from 'date-fns';
 import { Pagination } from '@/components/Pagination';
 import { SkeletonCard } from '@/components/SkeletonCard';
@@ -646,7 +646,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 <th className="px-6 py-3">Usuário</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Assinatura</th>
-                <th className="px-6 py-3">Nutri (Mentor)</th>
+                {activeTab === 'consultancy' && <th className="px-6 py-3">Nutri</th>}
                 <th className="px-6 py-3">Origem</th>
                 <th className="px-6 py-3">Entrou em</th>
                 <th className="px-6 py-3 text-right">LTV (Gasto Total)</th>
@@ -719,6 +719,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       );
                     })()}
                   </td>
+                  {activeTab === 'consultancy' && (
                   <td className="px-6 py-4">
                     {customer.is_consultancy ? (
                       <div className="flex flex-col">
@@ -729,6 +730,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       <span className="text-zinc-400 text-xs">-</span>
                     )}
                   </td>
+                  )}
                   <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
                     {(() => {
                       if (!customer.source || customer.source === 'direct') {
