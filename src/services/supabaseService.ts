@@ -11,25 +11,26 @@ export const getMRRForAmountAndPlan = (amount: number, planStr: string = '') => 
   // 1. Tentar inferir pelo valor exato se o plano for genérico
   if (Math.abs(amt - 49.00) < 1) return 49.00; // mensal
   if (Math.abs(amt - 389.22) < 2) return 389.22 / 12; // anual
-  if (Math.abs(amt - 197.00) < 1) return 197.00; // upsell mensal
-  if (Math.abs(amt - 187.00) < 1) return 187.00; // upsell trimestral (187/mo)
-  if (Math.abs(amt - 561.00) < 2) return 561.00 / 3; // total trimestral
-  if (Math.abs(amt - 327.00) < 1) return 327.00 / 2; // upsell semestral (327 a cada 2 meses => 163.5/mo)
-  if (Math.abs(amt - 981.00) < 2) return 981.00 / 6; // total semestral
+  if (Math.abs(amt - 197.00) < 1) return 197.00; // consultoria mensal
+  if (Math.abs(amt - 187.00) < 1) return 187.00; // consultoria trimestral (parcela mensal)
+  if (Math.abs(amt - 561.00) < 2) return 187.00; // consultoria trimestral total
+  if (Math.abs(amt - 327.00) < 1) return 327.00 / 2; // consultoria semestral (327 a cada 2 meses => 163.5/mo)
+  if (Math.abs(amt - 981.00) < 2) return 163.50; // consultoria semestral total (981/6)
 
   // 2. Fallbacks baseados na string
   if (!amt || amt <= 0) {
     if (pStr.includes('annual') || pStr.includes('anual')) amt = 389.22;
-    else if (pStr.includes('consultoria') || pStr.includes('upsell') || pStr.includes('vip')) {
-      if (pStr.includes('semi')) amt = 981.00;
-      else if (pStr.includes('quarter') || pStr.includes('trimestral')) amt = 561.00;
-      else amt = 197.00;
+    else if (pStr.includes('consultoria') || pStr.includes('upsell') || pStr.includes('vip') || pStr.includes('mensal')) {
+      if (pStr.includes('semi') || pStr.includes('semestral')) return 163.50;
+      else if (pStr.includes('quarter') || pStr.includes('trimestral')) return 187.00;
+      else if (pStr.includes('mensal')) return 197.00;
+      else return 197.00; // default consultoria
     } else {
       amt = 49.00;
     }
   }
 
-  // 3. Divisões por intervalo de string
+  // 3. Divisões por intervalo de string - Assinaturas padrão FitMind
   if (pStr.includes('annual') || pStr.includes('anual')) return amt / 12;
   if (pStr.includes('semi-annual') || pStr.includes('semestral')) return amt / 6;
   if (pStr.includes('quarterly') || pStr.includes('trimestral')) return amt / 3;
@@ -88,13 +89,15 @@ const realSupabaseService = {
     }
 
     // 2. Busca de múltiplas fontes
-    const [profilesRes, usersViewRes, subsRes, weightHistoryRes, waitlistRes, transRes] = await Promise.all([
+    const [profilesRes, usersViewRes, subsRes, weightHistoryRes, waitlistRes, transRes, consultationsRes, nutritionistsRes] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('fitmind_users_view').select('*'),
       supabase.from('subscriptions').select('*'),
       supabase.from('weight_history').select('*').order('date', { ascending: false }),
       supabase.from('launch_waitlist').select('*'),
-      supabase.from('transactions').select('*')
+      supabase.from('transactions').select('*'),
+      supabase.from('consultations').select('*'),
+      supabase.from('nutritionists').select('*')
     ]);
 
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
@@ -103,11 +106,14 @@ const realSupabaseService = {
     if (weightHistoryRes.error) console.error('Error fetching weight_history:', weightHistoryRes.error);
     if (waitlistRes.error) console.error('Error fetching launch_waitlist:', waitlistRes.error);
     if (transRes.error) console.error('Error fetching transactions:', transRes.error);
+    if (consultationsRes.error) console.error('Error fetching consultations:', consultationsRes.error);
+    if (nutritionistsRes.error) console.error('Error fetching nutritionists:', nutritionistsRes.error);
 
     console.log('Dashboard Data Sync:', {
       profiles: profilesRes.data?.length || 0,
       auth_users_view: usersViewRes.data?.length || 0,
       subscriptions: subsRes.data?.length || 0,
+      consultations: consultationsRes.data?.length || 0,
       weight_history: weightHistoryRes.data?.length || 0,
       waitlist: waitlistRes.data?.length || 0,
       transactions: transRes.data?.length || 0
@@ -140,6 +146,20 @@ const realSupabaseService = {
     if (waitlistRes.data) {
       waitlistRes.data.forEach((w: any) => {
         waitlistMap.set(w.user_id, w);
+      });
+    }
+
+    const consultsMap = new Map<string, any>();
+    if (consultationsRes.data) {
+      consultationsRes.data.forEach((c: any) => {
+        consultsMap.set(c.user_id, c);
+      });
+    }
+
+    const nutriMap = new Map<string, string>();
+    if (nutritionistsRes.data) {
+      nutritionistsRes.data.forEach((n: any) => {
+        nutriMap.set(n.id, n.name || n.full_name || 'Nutri');
       });
     }
 
@@ -323,6 +343,8 @@ const realSupabaseService = {
       const finalName = p.name || p.customer_name || (finalEmail ? finalEmail.split('@')[0] : 'Usuário');
 
       const waitlistRecord = waitlistMap.get(userId);
+      const consultRecord = consultsMap.get(userId);
+      const nutriName = consultRecord ? nutriMap.get(consultRecord.nutritionist_id) : undefined;
       
       // Tenta pegar o valor da assinatura de várias colunas possíveis
       const planAmount = Number(p.plan_amount) || Number(p.subscription_price) || Number(p.subscription_amount) || Number(p.amount) || Number(p.price) || 0;
@@ -331,9 +353,14 @@ const realSupabaseService = {
       let finalPlan = planName || 'monthly';
       if (!planName && p.plan) finalPlan = String(p.plan).toLowerCase();
 
+      // Se tiver consultoria, sobrescrever ou adicionar info de plano
+      if (consultRecord && consultRecord.subscription_status === 'active') {
+        finalPlan = `consultoria_${consultRecord.plan_type || 'mensal'}`;
+      }
+
       // Extract raw LTV from transactions (fallback to planAmount if missing/zero and user is active)
       let trueLtv = ltvMap.get(userId) || 0;
-      if (trueLtv === 0 && isPro && !isTester) {
+      if (trueLtv === 0 && (isPro || (consultRecord && consultRecord.subscription_status === 'active')) && !isTester) {
         trueLtv = planAmount > 0 ? planAmount : getMRRForAmountAndPlan(0, finalPlan);
       }
 
@@ -361,6 +388,11 @@ const realSupabaseService = {
         subscription_end_date: p.subscription_end_date || p.pro_expires_at,
         is_manual_pro: p.is_pro === true,
         pro_granted_at: p.pro_granted_at,
+        is_consultancy: !!consultRecord,
+        consultancy_plan: consultRecord?.plan_type,
+        consultancy_status: consultRecord?.subscription_status,
+        nutritionist_id: consultRecord?.nutritionist_id,
+        nutritionist_name: nutriName
       };
     }) as Customer[];
 

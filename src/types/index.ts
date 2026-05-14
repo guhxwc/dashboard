@@ -33,6 +33,11 @@ export interface Customer {
   subscription_end_date?: string;
   is_manual_pro?: boolean;
   pro_granted_at?: string;
+  is_consultancy?: boolean;
+  consultancy_plan?: string;
+  nutritionist_id?: string;
+  nutritionist_name?: string;
+  consultancy_status?: string;
 }
 
 export interface DailyLog {

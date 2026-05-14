@@ -25,7 +25,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'all' | 'waitlist' | 'manual_pro'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'waitlist' | 'manual_pro' | 'consultancy'>('all');
 
   // Pro Management State
   const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
@@ -189,6 +189,9 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
     if (activeTab === 'manual_pro') {
       return c.is_manual_pro;
     }
+    if (activeTab === 'consultancy') {
+      return c.is_consultancy;
+    }
 
     // Search filter
     if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase()) && !c.email.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -344,6 +347,16 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           >
             Acessos Manuais (Pro)
           </button>
+          <button
+            onClick={() => setActiveTab('consultancy')}
+            className={`flex-1 sm:flex-none px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === 'consultancy'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300'
+            }`}
+          >
+            Consultoria
+          </button>
         </div>
 
         {/* Toolbar */}
@@ -409,6 +422,9 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 <option value="all">Plano: Todos</option>
                 <option value="monthly">Plano: Mensal</option>
                 <option value="annual">Plano: Anual</option>
+                <option value="consultoria_mensal">Plano: Consultoria (Mensal)</option>
+                <option value="consultoria_trimestral">Plano: Consultoria (Trimestral)</option>
+                <option value="consultoria_semestral">Plano: Consultoria (Semestral)</option>
               </select>
 
               <select 
@@ -630,6 +646,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 <th className="px-6 py-3">Usuário</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Assinatura</th>
+                <th className="px-6 py-3">Nutri (Mentor)</th>
                 <th className="px-6 py-3">Origem</th>
                 <th className="px-6 py-3">Entrou em</th>
                 <th className="px-6 py-3 text-right">LTV (Gasto Total)</th>
@@ -701,6 +718,16 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                         </div>
                       );
                     })()}
+                  </td>
+                  <td className="px-6 py-4">
+                    {customer.is_consultancy ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{customer.nutritionist_name || 'Designado'}</span>
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider capitalize">{customer.consultancy_plan}</span>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400 text-xs">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
                     {(() => {
@@ -869,9 +896,25 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                   <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
                     <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><CreditCard className="w-4 h-4" /> Plano</span>
                     <span className="text-sm font-medium text-zinc-900 dark:text-white capitalize">
-                      {selectedCustomer.plan === 'annual' ? 'Anual' : selectedCustomer.plan === 'monthly' ? 'Mensal' : 'Desconhecido'}
+                      {selectedCustomer.plan?.replace('consultoria_', 'Consultoria ') || 'N/A'}
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><DollarSign className="w-4 h-4" /> Valor do Plano</span>
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">
+                      {formatCurrency(selectedCustomer.plan_amount || 0)}
+                    </span>
+                  </div>
+
+                  {selectedCustomer.is_consultancy && (
+                    <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2"><Users className="w-4 h-4" /> Nutri Responsável</span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {selectedCustomer.nutritionist_name || 'Não designado'}
+                      </span>
+                    </div>
+                  )}
 
                   {(() => {
                     if (selectedCustomer.is_manual_pro && selectedCustomer.pro_granted_at) {
