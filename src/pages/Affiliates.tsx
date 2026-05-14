@@ -106,9 +106,9 @@ export function AffiliatesPage() {
 
       await supabaseService.deleteAffiliate(id);
       await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting affiliate:', error);
-      alert('Erro ao excluir afiliado. Verifique se existem regras de segurança ou dependências que impedem a exclusão.');
+      alert(error.message || 'Erro ao excluir afiliado. Verifique se existem regras de segurança ou dependências que impedem a exclusão.');
       // Revert optimistic update
       setAffiliates(previousAffiliates);
       await fetchData();

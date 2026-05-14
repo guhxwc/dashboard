@@ -928,12 +928,15 @@ const realSupabaseService = {
   },
 
   deleteAffiliate: async (id: string): Promise<void> => {
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from('affiliates')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id);
 
     if (error) throw error;
+    if (count === 0) {
+      throw new Error('Nenhum afiliado foi excluído. Pode haver bloqueios por regras de segurança (RLS) ou o afiliado já ter sido deletado.');
+    }
   },
 
   manageUserPro: async (userId: string, action: 'grant' | 'revoke', reason?: string): Promise<{ success: boolean; message: string }> => {
