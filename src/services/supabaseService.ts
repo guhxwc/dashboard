@@ -4,6 +4,38 @@ import { format, subDays, subYears } from 'date-fns';
 import { mockService } from './mockData';
 import { DateFilter } from '@/components/DateRangePicker';
 
+export const getMRRForAmountAndPlan = (amount: number, planStr: string = '') => {
+  const pStr = planStr.toLowerCase();
+  let amt = Number(amount) || 0;
+
+  // 1. Tentar inferir pelo valor exato se o plano for genérico
+  if (Math.abs(amt - 49.00) < 1) return 49.00; // mensal
+  if (Math.abs(amt - 389.22) < 2) return 389.22 / 12; // anual
+  if (Math.abs(amt - 197.00) < 1) return 197.00; // upsell mensal
+  if (Math.abs(amt - 187.00) < 1) return 187.00; // upsell trimestral (187/mo)
+  if (Math.abs(amt - 561.00) < 2) return 561.00 / 3; // total trimestral
+  if (Math.abs(amt - 327.00) < 1) return 327.00 / 2; // upsell semestral (327 a cada 2 meses => 163.5/mo)
+  if (Math.abs(amt - 981.00) < 2) return 981.00 / 6; // total semestral
+
+  // 2. Fallbacks baseados na string
+  if (!amt || amt <= 0) {
+    if (pStr.includes('annual') || pStr.includes('anual')) amt = 389.22;
+    else if (pStr.includes('consultoria') || pStr.includes('upsell') || pStr.includes('vip')) {
+      if (pStr.includes('semi')) amt = 981.00;
+      else if (pStr.includes('quarter') || pStr.includes('trimestral')) amt = 561.00;
+      else amt = 197.00;
+    } else {
+      amt = 49.00;
+    }
+  }
+
+  // 3. Divisões por intervalo de string
+  if (pStr.includes('annual') || pStr.includes('anual')) return amt / 12;
+  if (pStr.includes('semi-annual') || pStr.includes('semestral')) return amt / 6;
+  if (pStr.includes('quarterly') || pStr.includes('trimestral')) return amt / 3;
+  return amt;
+};
+
 const DEMO_MODE_KEY = 'demo_mode_active';
 
 export const isDemoMode = () => {
@@ -56,12 +88,13 @@ const realSupabaseService = {
     }
 
     // 2. Busca de múltiplas fontes
-    const [profilesRes, usersViewRes, subsRes, weightHistoryRes, waitlistRes] = await Promise.all([
+    const [profilesRes, usersViewRes, subsRes, weightHistoryRes, waitlistRes, transRes] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('fitmind_users_view').select('*'),
       supabase.from('subscriptions').select('*'),
       supabase.from('weight_history').select('*').order('date', { ascending: false }),
-      supabase.from('launch_waitlist').select('*')
+      supabase.from('launch_waitlist').select('*'),
+      supabase.from('transactions').select('*')
     ]);
 
     if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
@@ -69,14 +102,30 @@ const realSupabaseService = {
     if (subsRes.error) console.error('Error fetching subscriptions:', subsRes.error);
     if (weightHistoryRes.error) console.error('Error fetching weight_history:', weightHistoryRes.error);
     if (waitlistRes.error) console.error('Error fetching launch_waitlist:', waitlistRes.error);
+    if (transRes.error) console.error('Error fetching transactions:', transRes.error);
 
     console.log('Dashboard Data Sync:', {
       profiles: profilesRes.data?.length || 0,
       auth_users_view: usersViewRes.data?.length || 0,
       subscriptions: subsRes.data?.length || 0,
       weight_history: weightHistoryRes.data?.length || 0,
-      waitlist: waitlistRes.data?.length || 0
+      waitlist: waitlistRes.data?.length || 0,
+      transactions: transRes.data?.length || 0
     });
+
+    // Sum transactions per user for exact LTV calculation
+    const ltvMap = new Map<string, number>();
+    if (transRes.data) {
+      transRes.data.forEach((t: any) => {
+        if (t.status === 'succeeded' || t.status === 'paid' || t.status === 'success') {
+          const uId = t.customer_id || t.user_id;
+          if (uId) {
+             const amt = Number(t.amount) || Number(t.plan_amount) || 0;
+             ltvMap.set(uId, (ltvMap.get(uId) || 0) + amt);
+          }
+        }
+      });
+    }
 
     const latestWeightMap = new Map<string, number>();
     if (weightHistoryRes.data) {
@@ -276,7 +325,17 @@ const realSupabaseService = {
       const waitlistRecord = waitlistMap.get(userId);
       
       // Tenta pegar o valor da assinatura de várias colunas possíveis
-      const planAmount = Number(p.plan_amount) || Number(p.subscription_price) || Number(p.subscription_amount) || Number(p.amount) || Number(p.price) || 49.90;
+      const planAmount = Number(p.plan_amount) || Number(p.subscription_price) || Number(p.subscription_amount) || Number(p.amount) || Number(p.price) || 0;
+
+      // Determine precise plan format
+      let finalPlan = planName || 'monthly';
+      if (!planName && p.plan) finalPlan = String(p.plan).toLowerCase();
+
+      // Extract raw LTV from transactions (fallback to planAmount if missing/zero and user is active)
+      let trueLtv = ltvMap.get(userId) || 0;
+      if (trueLtv === 0 && isPro && !isTester) {
+        trueLtv = planAmount > 0 ? planAmount : getMRRForAmountAndPlan(0, finalPlan);
+      }
 
       return {
         id: userId,
@@ -285,10 +344,11 @@ const realSupabaseService = {
         source: referral?.ref || 'direct',
         status,
         created_at: p.created_at,
-        ltv: status === 'tester' ? 0 : (isPro ? planAmount : 0),
+        ltv: status === 'tester' ? 0 : trueLtv,
+        plan_amount: planAmount,
         last_login: p.last_sign_in_at || p.last_active_at || p.created_at,
         current_streak: p.streak || p.current_streak || 0,
-        plan: p.plan || (planName === 'annual' ? 'annual' : 'monthly'),
+        plan: finalPlan,
         stripe_customer_id: p.stripe_customer_id,
         initial_weight: p.initial_weight,
         current_weight: p.current_weight,
@@ -473,22 +533,27 @@ const realSupabaseService = {
       if (!customer || customer.status === 'tester') return;
 
       const createdDate = format(new Date(sub.created_at), 'yyyy-MM-dd');
+      const mrrValue = getMRRForAmountAndPlan(sub.plan_amount, sub.plan || sub.plan_name);
+      
       if (statsMap.has(createdDate)) {
-        dailyMrrChanges.set(createdDate, (dailyMrrChanges.get(createdDate) || 0) + (sub.plan_amount || 49.90));
+        dailyMrrChanges.set(createdDate, (dailyMrrChanges.get(createdDate) || 0) + mrrValue);
       }
       const subStatus = (sub.status || '').toLowerCase();
       if (subStatus === 'canceled' && sub.updated_at) {
         const canceledDate = format(new Date(sub.updated_at), 'yyyy-MM-dd');
         if (statsMap.has(canceledDate)) {
-          dailyMrrChanges.set(canceledDate, (dailyMrrChanges.get(canceledDate) || 0) - (sub.plan_amount || 49.90));
+          dailyMrrChanges.set(canceledDate, (dailyMrrChanges.get(canceledDate) || 0) - mrrValue);
         }
       }
     });
 
     return sortedStats.map(stat => {
       currentActive += stat.new_active - stat.cancellations;
-      // Use the daily changes if we have them, otherwise fallback to average
-      const mrrChange = dailyMrrChanges.get(stat.date) || (stat.new_active - stat.cancellations) * 49.90;
+      // Use the daily changes if we have them, otherwise fallback to average (or 49.00 if historical)
+      let mrrChange = dailyMrrChanges.get(stat.date) || 0;
+      if (mrrChange === 0 && (stat.new_active > 0 || stat.cancellations > 0)) {
+         mrrChange = (stat.new_active - stat.cancellations) * 49.00;
+      }
       currentMrr += mrrChange;
       
       const { new_active, ...rest } = stat;
@@ -617,12 +682,7 @@ const realSupabaseService = {
     // Calcula o MRR baseado no plano real de cada usuario
     let mrr = 0;
     activeAtEndCustomers.forEach(c => {
-      if (c.plan === 'annual') {
-        // Plano anual: divide o valor anual por 12 para obter MRR
-        mrr += (c.ltv || 299.00) / 12;
-      } else {
-        mrr += (c.ltv || 49.90);
-      }
+      mrr += getMRRForAmountAndPlan(c.plan_amount || 0, c.plan || '');
     });
 
     const arr = mrr * 12;
@@ -640,7 +700,7 @@ const realSupabaseService = {
 
     const activeAtStart = activeAtStartCustomers.length;
 
-    const recentCancellations = subscriptions.filter((s: any) => {
+    const canceledSubs = subscriptions.filter((s: any) => {
       // Exclude testers and admins
       const customer = customers.find(c => c.id === s.user_id);
       if (!customer || customer.status === 'tester') return false;
@@ -648,7 +708,9 @@ const realSupabaseService = {
       return s.status === 'canceled' && 
         s.updated_at >= startDateIso && 
         s.updated_at <= endDateIso;
-    }).length;
+    });
+
+    const recentCancellations = canceledSubs.length;
 
     // Also count manual revocations from admin_actions_log if table exists
     let manualRevocations = 0;
@@ -698,9 +760,11 @@ const realSupabaseService = {
       
       return s.created_at >= startDateIso && s.created_at <= endDateIso;
     });
-    const newMrr = newSubsInPeriod.reduce((acc: number, curr: any) => acc + (curr.plan_amount || 49.90), 0);
+
+    const newMrr = newSubsInPeriod.reduce((acc: number, curr: any) => acc + getMRRForAmountAndPlan(curr.plan_amount, curr.plan || curr.plan_name), 0);
     
-    const lostMrr = (recentCancellations + manualRevocations) * (mrr / (activeUsers || 1) || 49.90);
+    const canceledMrr = canceledSubs.reduce((acc: number, curr: any) => acc + getMRRForAmountAndPlan(curr.plan_amount, curr.plan || curr.plan_name), 0);
+    const lostMrr = canceledMrr + (manualRevocations * (mrr / (activeUsers || 1) || 49.00));
     
     const netNewMrr = newMrr - lostMrr;
 

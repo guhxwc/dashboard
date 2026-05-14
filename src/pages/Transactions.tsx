@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, RefreshCw, CreditCard, DollarSign, AlertCircle, CheckCircle2, Clock, Users, Activity, ArrowRight, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { supabaseService } from '@/services/supabaseService';
+import { supabaseService, getMRRForAmountAndPlan } from '@/services/supabaseService';
 import { Transaction, Customer } from '@/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Pagination } from '@/components/Pagination';
@@ -146,7 +146,7 @@ export function Transactions() {
   const activeSubsCount = subscriptions.filter(s => s.status === 'active').length;
   const mrr = subscriptions
     .filter(s => s.status === 'active')
-    .reduce((acc, s) => acc + (Number(s.plan_amount) || 49.90), 0);
+    .reduce((acc, s) => acc + getMRRForAmountAndPlan(s.plan_amount || 0, s.plan || s.plan_name), 0);
 
   return (
     <div className="space-y-6">
