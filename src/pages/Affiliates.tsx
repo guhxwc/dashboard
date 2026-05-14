@@ -160,7 +160,9 @@ export function AffiliatesPage() {
         src === affiliateCode ||
         // Suporte a legados com underscore (ex: 'victor_hugo')
         src === affiliateCode.replace(/\s+/g, '_') ||
-        src === affiliate.id
+        src === affiliate.id ||
+        // Allan gets ALL consultancies regardless of origin
+        (isAllan && c.is_consultancy)
       );
     });
 
@@ -195,15 +197,30 @@ export function AffiliatesPage() {
         }
       }
 
-      baseCustomers.push(c);
+      const referredByAffiliate = (c.source || '').toUpperCase() === affiliateCode || 
+                               (c.source || '').toUpperCase().replace(/\s+/g, '_') === affiliateCode || 
+                               c.source === affiliate.id;
 
-      totalSales += (baseLtv + upsellLtv);
+      if (referredByAffiliate) {
+        baseCustomers.push(c);
+        totalSales += baseLtv;
+      }
       
+      if (c.is_consultancy && (isAllan || referredByAffiliate)) {
+        totalSales += upsellLtv;
+      }
+
       if (isAllan) {
-        commission += (baseLtv * 0.30) + (upsellLtv * 0.70);
+        if (referredByAffiliate) {
+          commission += (baseLtv * 0.30) + (upsellLtv * 0.70);
+        } else {
+          commission += (upsellLtv * 0.70); // Only gets consultancy, not base
+        }
       } else {
         // Normal affiliates only get commission on the base subscription
-        commission += (baseLtv * affiliate.commission_rate);
+        if (referredByAffiliate) {
+          commission += (baseLtv * affiliate.commission_rate);
+        }
       }
     });
 
