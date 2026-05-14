@@ -96,14 +96,21 @@ export function AffiliatesPage() {
   };
 
   const handleDeleteAffiliate = async (id: string) => {
+    // Store previous state for rollback
+    const previousAffiliates = [...affiliates];
     try {
-      await supabaseService.deleteAffiliate(id);
-      // BUG FIX: era setSelectedAffiliateId(null) que quebrava o tipo
+      // Optimistic update
+      setAffiliates(prev => prev.filter(a => a.id !== id));
       setSelectedAffiliateId('all');
+
+      await supabaseService.deleteAffiliate(id);
       await fetchData();
     } catch (error) {
       console.error('Error deleting affiliate:', error);
-      alert('Erro ao excluir afiliado. Verifique o console.');
+      alert('Erro ao excluir afiliado. Verifique se existem regras de segurança ou dependências que impedem a exclusão.');
+      // Revert optimistic update
+      setAffiliates(previousAffiliates);
+      await fetchData();
     }
   };
 
