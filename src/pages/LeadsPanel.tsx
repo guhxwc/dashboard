@@ -151,7 +151,7 @@ const LEADS_MOCK: Lead[] = [
   }
 ];
 
-const HOJE_STR = '2026-05-13';
+const HOJE_STR = new Date().toISOString().split('T')[0];
 
 function formatDataCurta(dateStr: string | null) {
   if (!dateStr) return '—';
@@ -313,6 +313,11 @@ export function LeadsPanel() {
       if (l.id === selectedLead.id) {
         const updated = { ...l, [type]: value || null };
         
+        // Se preencher data de 1 contato e for hoje, marca como abordado automaticamente para contar na meta
+        if (type === 'data_1_contato' && value === HOJE_STR && updated.status === 'nao_abordado') {
+          updated.status = 'abordado';
+        }
+
         if (type === 'data_ult_contato' && value) {
           const ud = new Date(value + 'T12:00:00');
           ud.setDate(ud.getDate() + 3);
@@ -383,14 +388,7 @@ export function LeadsPanel() {
         
         {/* LADO ESQUERDO: Greeting + Cards + Filters + Table */}
         <div className="flex-1 flex flex-col space-y-6 min-w-0">
-          <div className="px-1">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
-              Sua Agenda — Hoje
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-              Bom dia, Murilo.
-            </h2>
-          </div>
+
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
             {/* Card 1 */}
