@@ -378,11 +378,11 @@ export function LeadsPanel() {
         </div>
       </div>
 
-      {/* TOP SECTION: Cards + Prioridades */}
-      <div className="flex flex-col xl:flex-row gap-6 mb-8">
+      {/* MAIN WRAPPER: Lado Esquerdo + Lado Direito */}
+      <div className="flex flex-col xl:flex-row gap-6 mb-8 items-start">
         
-        {/* Lado Esquerdo: Greeting + Cards */}
-        <div className="flex-1 flex flex-col space-y-6">
+        {/* LADO ESQUERDO: Greeting + Cards + Filters + Table */}
+        <div className="flex-1 flex flex-col space-y-6 min-w-0">
           <div className="px-1">
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
               Sua Agenda — Hoje
@@ -395,120 +395,50 @@ export function LeadsPanel() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
             {/* Card 1 */}
             <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-violet-600 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-                <Users className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-violet-50 dark:bg-violet-500/10">
+                <Users className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Total de Leads</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{totalLeads}</span>
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-500 dark:text-emerald-400 mt-1 whitespace-nowrap">+12% vs mês anterior</span>
               </div>
             </div>
 
             {/* Card 2 */}
             <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-                <MessageSquare className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-blue-50 dark:bg-blue-500/10">
+                <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Em conversa</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{emConversa}</span>
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-500 dark:text-emerald-400 mt-1 whitespace-nowrap">+8% vs mês anterior</span>
               </div>
             </div>
 
             {/* Card 3 */}
             <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
-                <Calendar className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-orange-50 dark:bg-orange-500/10">
+                <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Follow-ups hoje</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{followupsHojeCount}</span>
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-500 dark:text-emerald-400 mt-1 whitespace-nowrap">+16% vs ontem</span>
               </div>
             </div>
 
             {/* Card 4 */}
             <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-emerald-600 shadow-[0_0_15px_rgba(5,150,105,0.3)]">
-                <CheckCircle className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-emerald-50 dark:bg-emerald-500/10">
+                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Parcerias fechadas</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{fechados}</span>
-                <span className="text-[10px] sm:text-xs font-semibold text-emerald-500 dark:text-emerald-400 mt-1 whitespace-nowrap">+20% vs mês anterior</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Lado Direito: Prioridades e Meta */}
-        <div className="xl:w-[380px] shrink-0 flex flex-col xl:pt-[3.5rem]">
-           <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col">
-             <div className="flex items-center gap-2 mb-6">
-               <AlertTriangle className="w-5 h-5 text-amber-500" />
-               <h3 className="font-semibold text-zinc-900 dark:text-white tracking-tight">Atenções & Prioridades</h3>
-             </div>
 
-             <div className="mb-6 bg-zinc-50 dark:bg-zinc-800/30 p-5 rounded-[20px] border border-zinc-100 dark:border-zinc-800/50">
-               <div className="flex justify-between items-end mb-2">
-                 <span className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">Meta diária de abordagens</span>
-                 <span className="text-sm font-bold text-zinc-900 dark:text-white">{abordagensHoje} / {metaAbordagens}</span>
-               </div>
-               <div className="w-full h-2.5 bg-zinc-200 dark:bg-zinc-700/50 rounded-full overflow-hidden mt-3">
-                 <div className={`h-full ${pbColor} transition-all`} style={{ width: `${pbWidth}%` }} />
-               </div>
-               {abordagensHoje < metaAbordagens ? (
-                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-3">
-                   Faltam <span className="text-zinc-700 dark:text-zinc-300 font-bold">{metaAbordagens - abordagensHoje} abordagens</span> para bater a meta.
-                 </p>
-               ) : (
-                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-3">
-                   Meta do dia atingida! Parabéns!
-                 </p>
-               )}
-             </div>
-
-             {followupsAtrasadosCount > 0 && (
-               <div className="mb-6 flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 rounded-[20px] border border-red-100 dark:border-red-500/20">
-                 <div className="flex items-center gap-3">
-                   <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                   <span className="text-sm font-semibold tracking-tight text-red-900 dark:text-red-300">Follow-ups atrasados</span>
-                 </div>
-                 <span className="text-xl font-bold text-red-600 dark:text-red-400">{followupsAtrasadosCount}</span>
-               </div>
-             )}
-
-             <div className="flex-1 flex flex-col space-y-3">
-               <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1 ml-1.5">Resolver Hoje</h4>
-               {prioridades.map(p => (
-                 <div 
-                   key={p.lead.id} 
-                   onClick={() => setSelectedLead(p.lead)} 
-                   className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-800/20 rounded-[16px] border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 cursor-pointer transition-colors group shadow-sm dark:shadow-none"
-                 >
-                   <div className="flex items-center gap-3.5">
-                     <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getCategoriaClasses(p.lead.categoria)}`}>
-                       {p.lead.nome.charAt(0).toUpperCase()}
-                     </div>
-                     <div className="min-w-0">
-                       <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-none mb-1.5 truncate">{p.lead.nome}</p>
-                       <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-none truncate">{p.razao}</p>
-                     </div>
-                   </div>
-                   <ChevronRight className="w-4 h-4 shrink-0 text-zinc-300 group-hover:text-zinc-500 transition-colors ml-2" />
-                 </div>
-               ))}
-               {prioridades.length === 0 && (
-                 <div className="text-sm text-zinc-500 text-center py-6">
-                   Tudo em dia!
-                 </div>
-               )}
-             </div>
-           </div>
-        </div>
-      </div>
 
       {/* FILTERS & GOAL BAR */}
       <div className="bg-white dark:bg-[#121214] p-4 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800/80">
@@ -750,6 +680,75 @@ export function LeadsPanel() {
             onPageChange={() => {}}
           />
       </div>
+      
+      </div> {/* FECHA O LADO ESQUERDO AQUI */}
+
+      {/* Lado Direito: Prioridades e Meta (agora pega toda a altura, do lado direito da tela) */}
+      <div className="xl:w-[380px] shrink-0 xl:sticky xl:top-6 flex flex-col h-auto xl:h-[calc(100vh-3rem)]">
+         <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col overflow-y-auto hide-scrollbar">
+           <div className="flex items-center gap-2 mb-6 shrink-0">
+             <AlertTriangle className="w-5 h-5 text-amber-500" />
+             <h3 className="font-semibold text-zinc-900 dark:text-white tracking-tight">Atenções & Prioridades</h3>
+           </div>
+
+           <div className="mb-6 bg-zinc-50 dark:bg-zinc-800/30 p-5 rounded-[20px] border border-zinc-100 dark:border-zinc-800/50 shrink-0">
+             <div className="flex justify-between items-end mb-2">
+               <span className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">Meta diária de abordagens</span>
+               <span className="text-sm font-bold text-zinc-900 dark:text-white">{abordagensHoje} / {metaAbordagens}</span>
+             </div>
+             <div className="w-full h-2.5 bg-zinc-200 dark:bg-zinc-700/50 rounded-full overflow-hidden mt-3">
+               <div className={`h-full ${pbColor} transition-all`} style={{ width: `${pbWidth}%` }} />
+             </div>
+             {abordagensHoje < metaAbordagens ? (
+               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-3">
+                 Faltam <span className="text-zinc-700 dark:text-zinc-300 font-bold">{metaAbordagens - abordagensHoje} abordagens</span> para bater a meta.
+               </p>
+             ) : (
+               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-3">
+                 Meta do dia atingida! Parabéns!
+               </p>
+             )}
+           </div>
+
+           {followupsAtrasadosCount > 0 && (
+             <div className="mb-6 flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 rounded-[20px] border border-red-100 dark:border-red-500/20 shrink-0">
+               <div className="flex items-center gap-3">
+                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                 <span className="text-sm font-semibold tracking-tight text-red-900 dark:text-red-300">Follow-ups atrasados</span>
+               </div>
+               <span className="text-xl font-bold text-red-600 dark:text-red-400">{followupsAtrasadosCount}</span>
+             </div>
+           )}
+
+           <div className="flex-1 flex flex-col space-y-3 pb-8">
+             <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1 ml-1.5">Resolver Hoje</h4>
+             {prioridades.map(p => (
+               <div 
+                 key={p.lead.id} 
+                 onClick={() => setSelectedLead(p.lead)} 
+                 className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-800/20 rounded-[16px] border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 cursor-pointer transition-colors group shadow-sm dark:shadow-none shrink-0"
+               >
+                 <div className="flex items-center gap-3.5">
+                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getCategoriaClasses(p.lead.categoria)}`}>
+                     {p.lead.nome.charAt(0).toUpperCase()}
+                   </div>
+                   <div className="min-w-0">
+                     <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-none mb-1.5 truncate">{p.lead.nome}</p>
+                     <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-none truncate">{p.razao}</p>
+                   </div>
+                 </div>
+                 <ChevronRight className="w-4 h-4 shrink-0 text-zinc-300 group-hover:text-zinc-500 transition-colors ml-2" />
+               </div>
+             ))}
+             {prioridades.length === 0 && (
+               <div className="text-sm text-zinc-500 text-center py-6 shrink-0">
+                 Tudo em dia!
+               </div>
+             )}
+           </div>
+         </div>
+      </div>
+    </div>
 
       {/* MODAL DETALHES */}
       {selectedLead && (
