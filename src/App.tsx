@@ -11,6 +11,7 @@ import { Transactions } from '@/pages/Transactions';
 import { AppUsage } from '@/pages/AppUsage';
 import { Jarvis } from '@/pages/Jarvis';
 import { Login } from '@/pages/Login';
+import { LeadsPanel } from '@/pages/LeadsPanel';
 import { supabase } from '@/lib/supabase';
 
 function App() {
@@ -78,6 +79,7 @@ function App() {
       case 'transactions': return <Transactions />;
       case 'financials': return <Financials />;
       case 'profit-sharing': return <ProfitSharing />;
+      case 'leads': return <LeadsPanel />;
       default: return <Overview />;
     }
   };
