@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame } from 'lucide-react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 
 type Lead = {
@@ -378,66 +378,96 @@ export function LeadsPanel() {
         </div>
       </div>
 
-      {/* PAINEL DE HOJE */}
-      <div className="bg-zinc-900 dark:bg-black text-white rounded-2xl shadow-lg overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] dark:opacity-5 pointer-events-none">
-           <Target className="w-64 h-64 -mt-16 -mr-16" />
+      {/* PAINEL DE HOJE (iOS Clean Style) */}
+      <div className="mb-8">
+        <div className="px-2 mb-6">
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
+            Sua Agenda — Hoje
+          </p>
+          <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+            Bom dia, Murilo.
+          </h2>
         </div>
-        
-        <div className="relative z-10 p-6 sm:p-8">
-           <h2 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-2">
-             Sua agenda de hoje — {formatDataCurta(HOJE_STR).toUpperCase()}
-           </h2>
-           <h3 className="text-2xl sm:text-3xl font-medium mb-8">
-             Bom dia, Murilo.
-           </h3>
 
-           <div className="flex flex-wrap gap-4 mb-8">
-             <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4 flex items-center gap-4">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                <div>
-                   <div className="text-2xl font-bold">{followupsAtrasadosCount}</div>
-                   <div className="text-xs text-zinc-400 font-medium tracking-wide uppercase mt-0.5">atrasados</div>
-                </div>
-             </div>
-             <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4 flex items-center gap-4">
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></div>
-                <div>
-                   <div className="text-2xl font-bold">{followupsHojeCount}</div>
-                   <div className="text-xs text-zinc-400 font-medium tracking-wide uppercase mt-0.5">para hoje</div>
-                </div>
-             </div>
-             <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4 flex items-center gap-4">
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                <div>
-                   <div className="text-2xl font-bold">{abordagensHoje} <span className="text-zinc-600 text-base font-medium">/ {metaAbordagens}</span></div>
-                   <div className="text-xs text-zinc-400 font-medium tracking-wide uppercase mt-0.5">abordagens</div>
-                </div>
-             </div>
-           </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                 <Target className="w-5 h-5 text-blue-500" />
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full">
+                 Meta Diária
+              </span>
+            </div>
+            <div>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{abordagensHoje}</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium mb-1">/ {metaAbordagens} abordados</span>
+              </div>
+              <div className="mt-3 flex-1 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                <div className={`h-full ${pbColor} transition-all rounded-full`} style={{ width: `${pbWidth}%` }} />
+              </div>
+            </div>
+          </div>
 
-           <div className="space-y-2.5">
-             {prioridades.map((p, i) => (
-                <div key={p.lead.id} className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm bg-white/5 border border-white/5 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors">
-                   <span className="font-semibold text-zinc-500 uppercase tracking-wider text-[11px] sm:w-[90px]">Prioridade {i+1}</span>
-                   <span className="font-medium text-white">{p.lead.nome}</span>
-                   <span className="text-zinc-400">— {p.razao}</span>
-                   <div className="flex-1"></div>
-                   <button 
-                     onClick={() => setSelectedLead(p.lead)} 
-                     className="text-white hover:text-blue-400 text-xs font-semibold self-start sm:self-auto transition-colors"
-                   >
-                     Resolver →
-                   </button>
-                </div>
-             ))}
-             {prioridades.length === 0 && (
-                <div className="text-sm font-medium text-zinc-400 py-3 bg-white/5 border border-white/5 rounded-lg px-5">
-                   Nenhuma prioridade urgente para hoje. Excelente trabalho!
-                </div>
-             )}
-           </div>
+          <div className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                 <Calendar className="w-5 h-5 text-amber-500" />
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full">
+                 Follow-ups
+              </span>
+            </div>
+            <div>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{followupsHojeCount}</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium mb-1">para hoje</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                 <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-full">
+                 Atrasados
+              </span>
+            </div>
+            <div>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{followupsAtrasadosCount}</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium mb-1">pendentes</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {prioridades.length > 0 && (
+          <div className="mt-4 bg-white dark:bg-zinc-900 p-5 rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800">
+             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-3 flex items-center gap-2">
+               <AlertTriangle className="w-4 h-4 text-amber-500" /> Prioridades de Atenção
+             </h3>
+             <div className="space-y-2">
+               {prioridades.map((p, i) => (
+                  <div key={p.lead.id} onClick={() => setSelectedLead(p.lead)} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors group border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700">
+                     <div className="flex items-center gap-3">
+                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getCategoriaClasses(p.lead.categoria)}`}>
+                         {p.lead.nome.charAt(0).toUpperCase()}
+                       </div>
+                       <div>
+                         <p className="text-sm font-semibold text-zinc-900 dark:text-white">{p.lead.nome}</p>
+                         <p className="text-xs text-zinc-500 dark:text-zinc-400">{p.razao}</p>
+                       </div>
+                     </div>
+                     <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-colors" />
+                  </div>
+               ))}
+             </div>
+          </div>
+        )}
       </div>
 
       {/* METRICS */}
