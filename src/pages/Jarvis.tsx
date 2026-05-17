@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, DailyLog } from '@/types';
 import { Send, Bot, User, Sparkles, Loader2, RefreshCw } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -214,9 +213,10 @@ export function Jarvis() {
     const checkApiKey = async () => {
       if (window.aistudio) {
         const selected = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(selected || !!process.env.GEMINI_API_KEY);
+        setHasApiKey(selected);
       } else {
-        setHasApiKey(!!process.env.GEMINI_API_KEY);
+        // Assume true and let backend handle it
+        setHasApiKey(true);
       }
     };
     checkApiKey();
@@ -279,24 +279,18 @@ export function Jarvis() {
     setIsLoading(true);
 
     try {
-      // Re-initialize to ensure we use the latest key from the dialog
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey && !window.aistudio) {
-        throw new Error('GEMINI_API_KEY não configurada no ambiente.');
-      }
-
-      const ai = new GoogleGenAI({ apiKey: apiKey || '' });
-
-      // Build conversation history for the model
+      // Em produção (e agora configurado via API), o apiKey não é exposto no front-end.
+      // Ele será validado no backend. Apenas testamos uma chamada para nossa própria API.
+      
       const conversationHistory = messages.map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
+        content: msg.content
       }));
 
       // Add the new user message
       conversationHistory.push({
         role: 'user',
-        parts: [{ text: userMessage.content }]
+        content: userMessage.content
       });
 
       const systemInstruction = `
@@ -335,20 +329,25 @@ export function Jarvis() {
         ${appContext}
       `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
-        contents: conversationHistory as any,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.7,
-          tools: [{ urlContext: {} }, { googleSearch: {} }]
-        }
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: conversationHistory,
+          systemInstruction
+        })
       });
+
+      if (!res.ok) {
+        throw new Error('Erro ao comunicar com a API');
+      }
+
+      const data = await res.json();
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.text || 'Desculpe, mestre. Não consegui processar essa solicitação no momento.',
+        content: data.text || 'Desculpe, mestre. Não consegui processar essa solicitação no momento.',
         timestamp: new Date(),
       };
 
