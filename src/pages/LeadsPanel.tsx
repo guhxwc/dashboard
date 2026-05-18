@@ -77,7 +77,8 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
   
   // Export modal
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [exportType, setExportType] = useState<'hoje' | 'semana' | 'tudo'>('hoje');
+  const [exportType, setExportType] = useState<'hoje' | 'semana' | 'tudo' | 'data'>('hoje');
+  const [exportDate, setExportDate] = useState<string>(HOJE_STR);
   const [exportResp, setExportResp] = useState<string>('todos');
   const [exportCat, setExportCat] = useState<string>('todas');
 
@@ -341,6 +342,9 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
     if (exportType === 'hoje') {
       inicioData = hojeStr;
       fimData = hojeStr;
+    } else if (exportType === 'data') {
+      inicioData = exportDate;
+      fimData = exportDate;
     } else if (exportType === 'semana') {
       const inicio = new Date(hoje);
       inicio.setDate(hoje.getDate() - hoje.getDay()); // Domingo
@@ -391,6 +395,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
 
     let title = "Relatório de Desempenho - Leads";
     if (exportType === 'hoje') title += " (Diário)";
+    if (exportType === 'data') title += ` (${formatDataCurta(exportDate)})`;
     if (exportType === 'semana') title += " (Semanal)";
     if (exportType === 'tudo') title += " (Geral)";
 
@@ -400,7 +405,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
     
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    const dataSub = exportType === 'tudo' ? 'Período: Completo' : (exportType === 'hoje' ? `Data: ${formatDataCurta(hojeStr)}` : `Período: ${formatDataCurta(inicioData)} a ${formatDataCurta(fimData)}`);
+    const dataSub = exportType === 'tudo' ? 'Período: Completo' : (exportType === 'hoje' ? `Data: ${formatDataCurta(hojeStr)}` : exportType === 'data' ? `Data: ${formatDataCurta(exportDate)}` : `Período: ${formatDataCurta(inicioData)} a ${formatDataCurta(fimData)}`);
     const respSub = `Responsável: ${exportResp === 'todos' ? 'Todos' : exportResp.charAt(0).toUpperCase() + exportResp.slice(1)}`;
     const catSub = `Categoria: ${exportCat === 'todas' ? 'Todas' : exportCat}`;
     
@@ -1244,26 +1249,44 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
              <div className="space-y-5">
                <div>
                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Período do Relatório</label>
-                 <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1.5 rounded-xl">
+                 <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1.5 rounded-xl flex-wrap gap-1">
                     <button 
                       onClick={() => setExportType('hoje')} 
                       className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'hoje' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
                     >
-                      Diário (Hoje)
+                      Hoje
                     </button>
                     <button 
                       onClick={() => setExportType('semana')} 
                       className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'semana' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
                     >
-                      Semanal
+                      Semana
                     </button>
                     <button 
                       onClick={() => setExportType('tudo')} 
                       className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'tudo' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
                     >
-                      Geral (Tudo)
+                      Geral
+                    </button>
+                    <button 
+                      onClick={() => setExportType('data')} 
+                      className={`flex-none px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center ${exportType === 'data' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                      title="Selecionar Data"
+                    >
+                      <Calendar className="w-4 h-4" />
                     </button>
                  </div>
+                 {exportType === 'data' && (
+                   <div className="mt-3">
+                     <input 
+                       type="date"
+                       value={exportDate}
+                       onChange={e => setExportDate(e.target.value)}
+                       max={HOJE_STR}
+                       className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2.5 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                     />
+                   </div>
+                 )}
                </div>
 
                <div>
