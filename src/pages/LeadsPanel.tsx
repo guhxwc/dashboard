@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check } from 'lucide-react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Pagination } from '@/components/Pagination';
 import {
   leadsService, recalcularLeadStatus,
@@ -47,37 +49,59 @@ function getStatusProps(s: string) {
   }
 }
 
-export function LeadsPanel() {
+export function LeadsPanel({ session }: { session?: any } = {}) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
+  // Default category filter based on user email
+  const defaultCategory = useMemo(() => {
+    const email = session?.user?.email?.toLowerCase() || '';
+    if (email === 'murilobarbosaguimaraes345@gmail.com') return 'Usuário GLP-1';
+    if (email === 'lucascauan2007@gmail.com' || email === 'gustavo.500fyz@gmail.com') return 'Nutricionista';
+    return '';
+  }, [session]);
+
   // Filters
   const [search, setSearch] = useState('');
-  const [fCategoria, setFCategoria] = useState('');
+  const [fCategoria, setFCategoria] = useState(defaultCategory);
   const [activeTab, setActiveTab] = useState<'todos' | 'sem_contato' | 'ativos' | 'perdidos'>('todos');
 
   // Modals/Drawers
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  
+  // Export modal
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportType, setExportType] = useState<'hoje' | 'semana' | 'tudo'>('hoje');
+  const [exportResp, setExportResp] = useState<string>('todos');
+  const [exportCat, setExportCat] = useState<string>('todas');
+
+  // Default responsavel
+  const defaultResponsavel = useMemo(() => {
+    const email = session?.user?.email?.toLowerCase() || '';
+    if (email === 'murilobarbosaguimaraes345@gmail.com') return 'murilo';
+    if (email === 'lucascauan2007@gmail.com') return 'lucas';
+    return 'gustavo';
+  }, [session]) as LeadResponsavel;
 
   // New Interaction
   const [newInteractionText, setNewInteractionText] = useState('');
 
   // New Lead form
   const [newLeadForm, setNewLeadForm] = useState({
-    nome: '', instagram: '', categoria: 'Nutricionista' as LeadCategoria,
+    nome: '', instagram: '', categoria: defaultCategory || 'Nutricionista',
     cidade: '', classificacao: 'quente' as LeadClassificacao,
-    responsavel: 'gustavo' as LeadResponsavel, observacoes: '',
+    responsavel: defaultResponsavel, observacoes: '',
   });
 
   // Import
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<XLSXPreview | null>(null);
-  const [importResponsavel, setImportResponsavel] = useState<LeadResponsavel>('gustavo');
+  const [importResponsavel, setImportResponsavel] = useState<LeadResponsavel>(defaultResponsavel);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   // Toast auto-dismiss
@@ -251,7 +275,7 @@ export function LeadsPanel() {
       const created = await leadsService.create({ ...newLeadForm, status: 'nao_abordado', data_1_contato: null, data_ult_contato: null, proximo_followup: null });
       setLeads(prev => [created, ...prev]);
       setIsNewLeadOpen(false);
-      setNewLeadForm({ nome: '', instagram: '', categoria: 'Nutricionista', cidade: '', classificacao: 'quente', responsavel: 'gustavo', observacoes: '' });
+      setNewLeadForm({ nome: '', instagram: '', categoria: defaultCategory as LeadCategoria || 'Nutricionista', cidade: '', classificacao: 'quente', responsavel: defaultResponsavel, observacoes: '' });
       setToast({ msg: 'Lead criado com sucesso!', type: 'ok' });
     } catch (e: any) {
       setToast({ msg: e.message?.includes('unique') ? 'Instagram já cadastrado.' : 'Erro ao criar lead.', type: 'err' });
@@ -281,6 +305,119 @@ export function LeadsPanel() {
     } catch { setToast({ msg: 'Erro ao importar', type: 'err' }); }
     finally { setImporting(false); }
   };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const hoje = new Date();
+    const hojeStr = HOJE_STR;
+    
+    // Calcula datas do período
+    let inicioData = '';
+    let fimData = '';
+    
+    if (exportType === 'hoje') {
+      inicioData = hojeStr;
+      fimData = hojeStr;
+    } else if (exportType === 'semana') {
+      const inicio = new Date(hoje);
+      inicio.setDate(hoje.getDate() - hoje.getDay()); // Domingo
+      inicioData = inicio.toISOString().split('T')[0];
+      const fim = new Date(inicio);
+      fim.setDate(inicio.getDate() + 6); // Sábado
+      fimData = fim.toISOString().split('T')[0];
+    }
+    
+    // Filtrar os leads pelo filtro "responsavel" e "categoria"
+    let leadsBase = leads;
+    if (exportResp !== 'todos') leadsBase = leadsBase.filter(l => l.responsavel === exportResp);
+    if (exportCat !== 'todas') leadsBase = leadsBase.filter(l => l.categoria === exportCat);
+
+    // Calcular estatísticas com base no período
+    let leadsConsiderados = [...leadsBase];
+    let abordagensNoPeriodo = 0;
+    let interacoesNoPeriodo = 0;
+    let fechamentosNoPeriodo = 0;
+
+    if (exportType !== 'tudo') {
+      // Filtrar apenas leads que tiveram alguma atividade no período
+      leadsConsiderados = leadsBase.filter(l => {
+        const abordadoNoPeriodo = l.data_1_contato && l.data_1_contato >= inicioData && l.data_1_contato <= fimData;
+        const interagiuNoPeriodo = l.interacoes.some(i => i.data >= inicioData && i.data <= fimData);
+        return abordadoNoPeriodo || interagiuNoPeriodo;
+      });
+      
+      // Contagens
+      abordagensNoPeriodo = leadsBase.filter(l => l.data_1_contato && l.data_1_contato >= inicioData && l.data_1_contato <= fimData).length;
+      interacoesNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.filter(i => i.data >= inicioData && i.data <= fimData).length, 0);
+      fechamentosNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.filter(i => (i.tipo === 'fechado' || i.tipo === 'fechado_assinante' || i.tipo === 'fechado_parceiro' || l.status.startsWith('fechado')) && i.data >= inicioData && i.data <= fimData).length, 0);
+    } else {
+      abordagensNoPeriodo = leadsBase.filter(l => l.data_1_contato).length;
+      interacoesNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.length, 0);
+      fechamentosNoPeriodo = leadsBase.filter(l => l.status.startsWith('fechado')).length;
+    }
+
+    const tableData = leadsConsiderados.map(l => [
+      l.nome,
+      l.instagram,
+      l.categoria,
+      l.responsavel.charAt(0).toUpperCase() + l.responsavel.slice(1),
+      getStatusProps(l.status).label,
+      formatDataCurta(l.data_1_contato),
+      formatDataCurta(l.proximo_followup)
+    ]);
+
+    let title = "Relatório de Desempenho - Leads";
+    if (exportType === 'hoje') title += " (Diário)";
+    if (exportType === 'semana') title += " (Semanal)";
+    if (exportType === 'tudo') title += " (Geral)";
+
+    doc.setFontSize(18);
+    doc.setTextColor(30, 41, 59);
+    doc.text(title, 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    const dataSub = exportType === 'tudo' ? 'Período: Completo' : (exportType === 'hoje' ? `Data: ${formatDataCurta(hojeStr)}` : `Período: ${formatDataCurta(inicioData)} a ${formatDataCurta(fimData)}`);
+    const respSub = `Responsável: ${exportResp === 'todos' ? 'Todos' : exportResp.charAt(0).toUpperCase() + exportResp.slice(1)}`;
+    const catSub = `Categoria: ${exportCat === 'todas' ? 'Todas' : exportCat}`;
+    
+    doc.text(dataSub, 14, 28);
+    doc.text(`${respSub}  |  ${catSub}`, 14, 34);
+
+    // Caixas de métricas 
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 40, 55, 20, 2, 2, 'FD');
+    doc.roundedRect(74, 40, 55, 20, 2, 2, 'FD');
+    doc.roundedRect(134, 40, 55, 20, 2, 2, 'FD');
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Novas Abordagens", 19, 47);
+    doc.text("Total Interações", 79, 47);
+    doc.text("Fechamentos", 139, 47);
+
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text(String(abordagensNoPeriodo), 19, 56);
+    doc.text(String(interacoesNoPeriodo), 79, 56);
+    doc.text(String(fechamentosNoPeriodo), 139, 56);
+
+    autoTable(doc, {
+      startY: 70,
+      head: [['Lead', 'Rede Social', 'Categoria', 'Resp.', 'Status', '1º Contato', 'Próx. Follow-up']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    doc.save(`relatorio-leads-${exportType}.pdf`);
+    setIsExportOpen(false);
+    setToast({ msg: 'PDF gerado com sucesso!', type: 'ok' });
+  };
+
   // Loading state
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-96 gap-3">
@@ -308,6 +445,13 @@ export function LeadsPanel() {
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gerencie os contatos e acompanhe o progresso das abordagens.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2.5 sm:py-2 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Exportar PDF
+          </button>
           <button 
             onClick={() => setIsImportOpen(true)}
             className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2.5 sm:py-2 text-sm font-medium flex items-center justify-center gap-2"
@@ -1048,6 +1192,87 @@ export function LeadsPanel() {
                      {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : `Importar ${importPreview?.total ?? ''} leads`}
                   </button>
                 )}
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EXPORTAR PDF */}
+      {isExportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 h-[100dvh]">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setIsExportOpen(false)} />
+          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+             <div className="flex items-center gap-2 mb-2">
+               <div className="bg-blue-50 dark:bg-blue-900/30 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+                 <Download className="w-5 h-5" />
+               </div>
+               <h2 className="text-xl font-bold text-zinc-900 dark:text-white ml-2">Exportar Relatório</h2>
+             </div>
+             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">Gere um PDF detalhado com o desempenho das abordagens.</p>
+
+             <div className="space-y-5">
+               <div>
+                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Período do Relatório</label>
+                 <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1.5 rounded-xl">
+                    <button 
+                      onClick={() => setExportType('hoje')} 
+                      className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'hoje' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                    >
+                      Diário (Hoje)
+                    </button>
+                    <button 
+                      onClick={() => setExportType('semana')} 
+                      className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'semana' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                    >
+                      Semanal
+                    </button>
+                    <button 
+                      onClick={() => setExportType('tudo')} 
+                      className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${exportType === 'tudo' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700'}`}
+                    >
+                      Geral (Tudo)
+                    </button>
+                 </div>
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Filtrar por Responsável</label>
+                 <select 
+                   value={exportResp} 
+                   onChange={e => setExportResp(e.target.value)}
+                   className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2.5 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                 >
+                   <option value="todos">Todos os Responsáveis</option>
+                   <option value="gustavo">Gustavo</option>
+                   <option value="murilo">Murilo</option>
+                   <option value="lucas">Lucas</option>
+                   <option value="nicolas">Nicolas</option>
+                 </select>
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Filtrar por Categoria</label>
+                 <select 
+                   value={exportCat} 
+                   onChange={e => setExportCat(e.target.value)}
+                   className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2.5 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                 >
+                   <option value="todas">Todas as Categorias</option>
+                   <option value="Nutricionista">Nutricionistas</option>
+                   <option value="Usuário GLP-1">Usuários GLP-1</option>
+                   <option value="Parceria Local">Parcerias Locais</option>
+                 </select>
+               </div>
+             </div>
+
+             <div className="mt-8 flex justify-end gap-3">
+                <button onClick={() => setIsExportOpen(false)} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                   Cancelar
+                </button>
+                <button onClick={handleExportPDF} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors">
+                   Baixar PDF
+                </button>
              </div>
           </div>
         </div>

@@ -79,7 +79,7 @@ function App() {
       case 'transactions': return <Transactions />;
       case 'financials': return <Financials />;
       case 'profit-sharing': return <ProfitSharing />;
-      case 'leads': return <LeadsPanel />;
+      case 'leads': return <LeadsPanel session={session} />;
       default: return <Overview />;
     }
   };
@@ -94,6 +94,31 @@ function App() {
 
   if (!session) {
     return <Login onLogin={() => {}} />;
+  }
+
+  const allowedEmails = [
+    'gustavo.500fyz@gmail.com',
+    'lucascauan2007@gmail.com',
+    'murilobarbosaguimaraes345@gmail.com'
+  ];
+
+  const userEmail = session?.user?.email?.toLowerCase() || '';
+
+  if (!allowedEmails.includes(userEmail)) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-red-500">Acesso Negado</h1>
+          <p className="text-zinc-400">Você não tem permissão para acessar este painel.</p>
+          <button 
+            onClick={() => supabase.auth.signOut()}
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition-colors"
+          >
+            Sair
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
