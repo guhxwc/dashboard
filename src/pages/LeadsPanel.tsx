@@ -67,6 +67,8 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
   const [search, setSearch] = useState('');
   const [fCategoria, setFCategoria] = useState(defaultCategory);
   const [activeTab, setActiveTab] = useState<'todos' | 'sem_contato' | 'ativos' | 'perdidos'>('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Modals/Drawers
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -172,6 +174,10 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       .slice(0, 4);
   }, [leads]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, fCategoria, activeTab]);
+
   const filteredLeads = useMemo(() => {
     let result = leads.filter(l => {
       const matchSearch = search === '' ||
@@ -190,6 +196,9 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
     result.sort((a, b) => peso[b.classificacao] - peso[a.classificacao]);
     return result;
   }, [leads, search, activeTab, fCategoria]);
+
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Metrics
   const totalLeads = leads.length;
@@ -227,6 +236,20 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       }
     } catch {
       setToast({ msg: 'Erro ao atualizar status', type: 'err' });
+    }
+  };
+
+  const handleResponsavelChange = async (leadId: string, newResponsavel: LeadResponsavel) => {
+    setLeads(prev => prev.map(l => {
+      if (l.id !== leadId) return l;
+      const updated = { ...l, responsavel: newResponsavel };
+      if (selectedLead?.id === leadId) setSelectedLead(updated);
+      return updated;
+    }));
+    try {
+      await leadsService.update(leadId, { responsavel: newResponsavel });
+    } catch {
+      setToast({ msg: 'Erro ao atualizar responsável', type: 'err' });
     }
   };
 
@@ -576,7 +599,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       {/* Mobile Card View */}
       <div className="block lg:hidden space-y-4">
         <AnimatePresence mode="popLayout">
-          {filteredLeads.map((lead, index) => {
+          {paginatedLeads.map((lead, index) => {
             const rProps = getResponsavelProps(lead.responsavel);
             const sProps = getStatusProps(lead.status);
             const isDelayed = lead.proximo_followup && lead.proximo_followup < HOJE_STR && (lead.status === 'abordado' || lead.status === 'em_conversa' || lead.status.includes('followup'));
@@ -682,7 +705,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {filteredLeads.map(lead => {
+              {paginatedLeads.map(lead => {
                 const rProps = getResponsavelProps(lead.responsavel);
                 const sProps = getStatusProps(lead.status);
                 const isDelayed = lead.proximo_followup && lead.proximo_followup < HOJE_STR && (lead.status === 'abordado' || lead.status === 'em_conversa' || lead.status.includes('followup'));
@@ -777,9 +800,9 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
         </div>
         <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">
           <Pagination
-            currentPage={1}
-            totalPages={Math.ceil(totalLeads / 25)}
-            onPageChange={() => {}}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
         </div>
       </div>
@@ -787,9 +810,9 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       {/* Pagination for Mobile (outside table container) */}
       <div className="block lg:hidden w-full flex justify-center py-2">
          <Pagination
-            currentPage={1}
-            totalPages={Math.ceil(totalLeads / 25)}
-            onPageChange={() => {}}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
       </div>
       
@@ -947,9 +970,16 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Responsável</label>
-                  <div className="w-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 capitalize flex items-center gap-2 cursor-not-allowed">
-                     {selectedLead.responsavel}
-                  </div>
+                  <select 
+                    value={selectedLead.responsavel}
+                    onChange={(e) => handleResponsavelChange(selectedLead.id, e.target.value as LeadResponsavel)}
+                    className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white capitalize focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
+                  >
+                     <option value="gustavo">Gustavo</option>
+                     <option value="murilo">Murilo</option>
+                     <option value="lucas">Lucas</option>
+                     <option value="nicolas">Nicolas</option>
+                  </select>
                 </div>
 
                 <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
