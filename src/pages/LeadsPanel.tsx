@@ -916,14 +916,16 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       </div>
       {/* MODAL DETALHES */}
       {selectedLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
-          <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setSelectedLead(null)} />
-          <div className="relative w-full h-full sm:h-auto sm:max-w-3xl bg-white dark:bg-zinc-900 sm:shadow-2xl sm:rounded-2xl flex flex-col sm:max-h-[85vh] border-0 sm:border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6 h-[100dvh]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedLead(null)} />
+          <div className="relative w-full h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-white dark:bg-zinc-900 sm:shadow-2xl rounded-t-[32px] sm:rounded-2xl flex flex-col border-t sm:border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+            
             {/* Modal Header */}
-            <div className="px-5 py-6 sm:px-6 sm:py-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 pt-8 sm:pt-5 transition-all">
+            <div className="px-5 pb-4 pt-1 sm:pt-5 sm:px-6 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 flex-shrink-0 relative">
               <button 
                 onClick={() => setSelectedLead(null)}
-                className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                className="absolute top-4 sm:top-5 right-4 sm:right-5 p-2 bg-zinc-100/50 dark:bg-zinc-800/50 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
                 title="Fechar"
               >
                 <X className="w-5 h-5" />
@@ -1050,15 +1052,15 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
             </div>
 
             {/* Add Interaction */}
-            <div className="p-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50">
+            <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50 pb-8 sm:pb-5 flex-shrink-0">
                <textarea 
                   value={newInteractionText}
                   onChange={e => setNewInteractionText(e.target.value)}
                   placeholder="Registrar nova interação com este lead..."
-                  className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white resize-none h-24 mb-3 transition-shadow"
+                  className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white resize-none h-20 sm:h-24 mb-3 transition-shadow"
                />
                <div className="flex justify-end pr-1">
-                  <button onClick={handleAddInteraction} disabled={!newInteractionText.trim() || saving} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <button onClick={handleAddInteraction} disabled={!newInteractionText.trim() || saving} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white rounded-lg px-5 py-2 sm:py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                      {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                      Salvar Interação
                   </button>
@@ -1069,10 +1071,10 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       )}
       {/* MODAL NOVO LEAD */}
       {isNewLeadOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 pb-0 h-[100dvh]">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setIsNewLeadOpen(false)} />
-          <div className="relative w-full sm:max-w-lg bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
-             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 h-[100dvh]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsNewLeadOpen(false)} />
+          <div className="relative w-full sm:max-w-lg bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border-t sm:border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden shrink-0" />
              <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">Adicionar Lead</h2>
              <div className="space-y-4">
                 <div>
@@ -1129,10 +1131,10 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
 
       {/* MODAL IMPORTAR */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 h-[100dvh]">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { if (!importing) { setIsImportOpen(false); setImportFile(null); setImportPreview(null); setImportResult(null); }}} />
-          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto">
-             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 h-[100dvh]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => { if (!importing) { setIsImportOpen(false); setImportFile(null); setImportPreview(null); setImportResult(null); }}} />
+          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border-t sm:border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto">
+             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden shrink-0" />
              <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Importar Leads</h2>
              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Planilha com abas: <strong>Nutricionistas</strong>, <strong>Usuários GLP-1</strong>, <strong>Parcerias Locais</strong></p>
 
@@ -1234,10 +1236,10 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
 
       {/* MODAL EXPORTAR PDF */}
       {isExportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 h-[100dvh]">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setIsExportOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
-             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 h-[100dvh]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsExportOpen(false)} />
+          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border-t sm:border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+             <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mt-[-8px] mb-6 sm:hidden shrink-0" />
              <div className="flex items-center gap-2 mb-2">
                <div className="bg-blue-50 dark:bg-blue-900/30 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
                  <Download className="w-5 h-5" />
