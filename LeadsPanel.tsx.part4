@@ -1,0 +1,147 @@
+  // Loading state
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-96 gap-3">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">Carregando leads...</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 max-w-full overflow-x-hidden">
+      {/* TOAST */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
+          {toast.type === 'ok' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
+        </div>
+      )}
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-zinc-900 dark:text-white">
+            <Target className="w-6 h-6 text-blue-600" />
+            CRM — Leads
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gerencie os contatos e acompanhe o progresso das abordagens.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button 
+            onClick={() => setIsImportOpen(true)}
+            className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2.5 sm:py-2 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Importar planilha
+          </button>
+          <button 
+            onClick={() => setIsNewLeadOpen(true)}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2.5 sm:py-2 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Lead
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN WRAPPER: Lado Esquerdo + Lado Direito */}
+      <div className="flex flex-col xl:flex-row gap-6 mb-8 items-start w-full">
+        
+        {/* LADO ESQUERDO: Greeting + Cards + Filters + Table */}
+        <div className="flex-1 flex flex-col space-y-6 min-w-0 w-full overflow-hidden">
+
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
+            {/* Card 1 */}
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-violet-50 dark:bg-violet-500/10">
+                <Users className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Total de Leads</span>
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{totalLeads}</span>
+              </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-blue-50 dark:bg-blue-500/10">
+                <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Em conversa</span>
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{emConversa}</span>
+              </div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-orange-50 dark:bg-orange-500/10">
+                <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Follow-ups hoje</span>
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{followupsHojeCount}</span>
+              </div>
+            </div>
+
+            {/* Card 4 */}
+            <div className="bg-white dark:bg-[#121214] p-5 rounded-[20px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center gap-4 w-full">
+              <div className="w-12 h-12 rounded-full flex shrink-0 items-center justify-center bg-emerald-50 dark:bg-emerald-500/10">
+                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">Parcerias fechadas</span>
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight mt-0.5">{fechados}</span>
+              </div>
+            </div>
+          </div>
+
+
+
+      {/* FILTERS & GOAL BAR */}
+      <div className="bg-white dark:bg-[#121214] p-3 sm:p-5 rounded-[24px] shadow-md border border-zinc-100 dark:border-zinc-800/80 w-full overflow-hidden">
+        <div className="flex flex-col xl:flex-row gap-5 justify-between items-start xl:items-center w-full">
+          <div className="flex bg-zinc-100 dark:bg-zinc-800/40 p-1.5 rounded-xl w-full xl:w-auto overflow-x-auto hide-scrollbar scroll-smooth">
+            {[
+              { id: 'todos', label: 'Todos' },
+              { id: 'sem_contato', label: 'Sem Contato' },
+              { id: 'ativos', label: 'Ativos' },
+              { id: 'perdidos', label: 'Perdidos / Não Quis' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-5 py-2 sm:py-1.5 text-sm font-bold rounded-lg transition-all whitespace-nowrap flex-1 sm:flex-none ${
+                  activeTab === tab.id 
+                    ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' 
+                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <div className="relative w-full sm:w-80 shrink-0">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome, @ ou cidade..." 
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-10 border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 focus:bg-white dark:focus:bg-zinc-900 rounded-xl px-3 py-3 sm:py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none text-zinc-900 dark:text-white transition-all shadow-inner"
+              />
+            </div>
+            
+            <select 
+              value={fCategoria} onChange={e => setFCategoria(e.target.value)}
+              className="w-full sm:w-auto border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl px-4 py-3 sm:py-2 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all shadow-inner cursor-pointer"
+            >
+              <option value="">Todas Categorias</option>
+              <option value="Nutricionista">Nutricionista</option>
+              <option value="Usuário GLP-1">Usuário GLP-1</option>
+              <option value="Parceria Local">Parceria Local</option>
+            </select>
+          </div>
+        </div>
+      </div>

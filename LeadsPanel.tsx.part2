@@ -1,0 +1,97 @@
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // ── Carregar leads do banco ──────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await leadsService.list();
+        if (!mounted) return;
+        const recalc = data.map(recalcularLeadStatus);
+        setLeads(recalc);
+        // Persiste mudanças automáticas de status no banco
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].status !== recalc[i].status || data[i].proximo_followup !== recalc[i].proximo_followup) {
+            leadsService.update(recalc[i].id, {
+              status: recalc[i].status,
+              proximo_followup: recalc[i].proximo_followup,
+            }).catch(() => {});
+          }
+        }
+      } catch (e: any) {
+        if (mounted) setToast({ msg: 'Erro ao carregar leads', type: 'err' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Agenda / Prioridades
+  const dataDiffDays = (d1: string, d2: string) => {
+    return (new Date(d2).getTime() - new Date(d1).getTime()) / (1000 * 3600 * 24);
+  };
+
+  const followupsAtrasadosCount = leads.filter(l => l.proximo_followup && l.proximo_followup < HOJE_STR && (l.status === 'abordado' || l.status === 'em_conversa')).length;
+  const followupsHojeCount = leads.filter(l => l.proximo_followup === HOJE_STR && (l.status === 'abordado' || l.status === 'em_conversa')).length;
+
+  const prioridades = useMemo(() => {
+    return leads
+      .filter(l => l.status === 'abordado' || l.status === 'em_conversa')
+      .map(l => {
+        let pontuacao = 0;
+        let razao = '';
+        if (l.proximo_followup) {
+          if (l.proximo_followup < HOJE_STR) {
+            pontuacao = 100 + dataDiffDays(l.proximo_followup, HOJE_STR);
+            razao = `Follow-up atrasado (venceu ${formatDataCurta(l.proximo_followup)})`;
+          } else if (l.proximo_followup === HOJE_STR) {
+            pontuacao = 80;
+            razao = 'Follow-up vence hoje';
+          }
+        }
+        if (!l.proximo_followup && l.data_ult_contato) {
+          const diff = dataDiffDays(l.data_ult_contato, HOJE_STR);
+          if (diff > 3) { pontuacao = 50 + diff; razao = `Sem contato há ${Math.floor(diff)} dias`; }
+        }
+        return { lead: l, pontuacao, razao };
+      })
+      .filter(item => item.pontuacao > 0)
+      .sort((a, b) => b.pontuacao - a.pontuacao)
+      .slice(0, 4);
+  }, [leads]);
+
+  const filteredLeads = useMemo(() => {
+    let result = leads.filter(l => {
+      const matchSearch = search === '' ||
+        l.nome.toLowerCase().includes(search.toLowerCase()) ||
+        l.instagram.toLowerCase().includes(search.toLowerCase()) ||
+        l.cidade.toLowerCase().includes(search.toLowerCase());
+      const matchTab =
+        activeTab === 'todos' ? true :
+        activeTab === 'sem_contato' ? l.status === 'nao_abordado' :
+        activeTab === 'ativos' ? (l.status === 'abordado' || l.status === 'em_conversa') :
+        activeTab === 'perdidos' ? (l.status === 'nao_quis' || l.status === 'sem_resposta') : true;
+      const matchCat = fCategoria === '' || l.categoria === fCategoria;
+      return matchSearch && matchTab && matchCat;
+    });
+    const peso: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
+    result.sort((a, b) => peso[b.classificacao] - peso[a.classificacao]);
+    return result;
+  }, [leads, search, activeTab, fCategoria]);
+
+  // Metrics
+  const totalLeads = leads.length;
+  const quentes = leads.filter(l => l.classificacao === 'quente').length;
+  const emConversa = leads.filter(l => l.status === 'em_conversa').length;
+  const fechados = leads.filter(l => l.status === 'fechado_assinante' || l.status === 'fechado_parceiro').length;
+
+  const abordagensHoje = leads.filter(l => l.data_1_contato === HOJE_STR).length;
+  const metaAbordagens = 5;
+  const pbWidth = Math.min((abordagensHoje / metaAbordagens) * 100, 100);
+  const pbColor = abordagensHoje >= 5 ? 'bg-emerald-500' : abordagensHoje >= 3 ? 'bg-yellow-500' : 'bg-red-500';

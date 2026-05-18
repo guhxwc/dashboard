@@ -1,0 +1,146 @@
+      {/* MODAL DETALHES */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
+          <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setSelectedLead(null)} />
+          <div className="relative w-full h-full sm:h-auto sm:max-w-3xl bg-white dark:bg-zinc-900 sm:shadow-2xl sm:rounded-2xl flex flex-col sm:max-h-[85vh] border-0 sm:border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
+            {/* Modal Header */}
+            <div className="px-5 py-6 sm:px-6 sm:py-5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 pt-8 sm:pt-5 transition-all">
+              <button 
+                onClick={() => setSelectedLead(null)}
+                className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="flex gap-4 items-center pr-12">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${getCategoriaClasses(selectedLead.categoria)}`}>
+                  {selectedLead.nome.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{selectedLead.nome}</h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-sm text-zinc-500">
+                    <a href={`https://instagram.com/${selectedLead.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1 group">
+                      {selectedLead.instagram}
+                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                    <span>•</span>
+                    <span>{selectedLead.cidade}</span>
+                    <span>•</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${getCategoriaClasses(selectedLead.categoria)}`}>
+                      {selectedLead.categoria}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${getClassificacaoProps(selectedLead.classificacao).classes}`}>
+                      {getClassificacaoProps(selectedLead.classificacao).label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Scroll */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8 pb-8 sm:pb-6">
+              
+              {/* Infos Sidebar */}
+              <div className="w-full md:w-64 space-y-4 sm:space-y-5 shrink-0">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Status do Lead</label>
+                  <select 
+                    value={selectedLead.status}
+                    onChange={(e) => handleStatusChange(selectedLead.id, e.target.value as Lead['status'])}
+                    className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
+                  >
+                    <option value="nao_abordado">Não abordado</option>
+                    <option value="abordado">Abordado</option>
+                    <option value="em_conversa">Em conversa</option>
+                    <option value="nao_quis">Não quis</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Responsável</label>
+                  <div className="w-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 capitalize flex items-center gap-2 cursor-not-allowed">
+                     {selectedLead.responsavel}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">1º Contato</label>
+                    <input 
+                      type="date" 
+                      value={selectedLead.data_1_contato || ''}
+                      onChange={e => handleDateChange('data_1_contato', e.target.value)}
+                      className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Último Contato</label>
+                    <input 
+                      type="date" 
+                      value={selectedLead.data_ult_contato || ''}
+                      onChange={e => handleDateChange('data_ult_contato', e.target.value)}
+                      className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Próx. Follow-up</label>
+                    <input 
+                      type="date" 
+                      value={selectedLead.proximo_followup || ''}
+                      onChange={e => handleDateChange('proximo_followup', e.target.value)}
+                      className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Histórico */}
+              <div className="flex-1 min-w-0 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 pt-8 md:pt-0 md:pl-8">
+                <h3 className="font-semibold text-lg text-zinc-900 dark:text-white mb-6">Histórico de Interações</h3>
+                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-[2px] before:bg-zinc-100 dark:before:bg-zinc-800">
+                  {selectedLead.interacoes.length === 0 ? (
+                    <p className="text-sm text-zinc-500 pl-14 pb-4">Nenhuma interação registrada.</p>
+                  ) : (
+                    selectedLead.interacoes.map(int => (
+                      <div key={int.id} className="relative flex items-start gap-4">
+                         <div className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                            {int.tipo === 'fechado' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : 
+                             int.tipo === 'nao_quis' ? <XCircle className="w-4 h-4 text-rose-500" /> : 
+                             <MessageSquare className="w-4 h-4" />}
+                         </div>
+                         <div className="flex-1 pt-1 border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                               <span className="text-sm font-semibold text-zinc-900 dark:text-white">{int.registrado_por}</span>
+                               <span className="text-xs font-medium text-zinc-400">{formatDataCurta(int.data)}</span>
+                            </div>
+                            <div className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                                {int.texto}
+                            </div>
+                         </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Add Interaction */}
+            <div className="p-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50">
+               <textarea 
+                  value={newInteractionText}
+                  onChange={e => setNewInteractionText(e.target.value)}
+                  placeholder="Registrar nova interação com este lead..."
+                  className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white resize-none h-24 mb-3 transition-shadow"
+               />
+               <div className="flex justify-end pr-1">
+                  <button onClick={handleAddInteraction} disabled={!newInteractionText.trim() || saving} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                     Salvar Interação
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}

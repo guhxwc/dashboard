@@ -1,0 +1,104 @@
+  // ── Handlers integrados com o banco ─────────────────────────────────────
+
+  const handleStatusChange = async (leadId: string, newStatus: Lead['status']) => {
+    // Optimistic update
+    setLeads(prev => prev.map(l => {
+      if (l.id !== leadId) return l;
+      const updated = { ...l, status: newStatus };
+      if (selectedLead?.id === leadId) setSelectedLead(updated);
+      return updated;
+    }));
+    try {
+      await leadsService.update(leadId, { status: newStatus });
+      // Auto-interação de mudança de status
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        await leadsService.addInteracao(leadId, {
+          data: HOJE_STR, tipo: 'status_change',
+          texto: `Status alterado para "${getStatusProps(newStatus).label}"`,
+          registrado_por: 'Admin',
+        });
+        const interacoes = await leadsService.list().then(ls => ls.find(l => l.id === leadId)?.interacoes ?? []);
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, interacoes } : l));
+        if (selectedLead?.id === leadId) setSelectedLead(s => s ? { ...s, interacoes } : s);
+      }
+    } catch {
+      setToast({ msg: 'Erro ao atualizar status', type: 'err' });
+    }
+  };
+
+  const handleDateChange = async (type: 'data_1_contato' | 'data_ult_contato' | 'proximo_followup', value: string) => {
+    if (!selectedLead) return;
+    const patch: Partial<Lead> = { [type]: value || null };
+
+    if (type === 'data_1_contato' && value === HOJE_STR && selectedLead.status === 'nao_abordado') {
+      patch.status = 'abordado';
+    }
+    if (type === 'data_ult_contato' && value) {
+      const ud = new Date(value + 'T12:00:00');
+      ud.setDate(ud.getDate() + 3);
+      patch.proximo_followup = ud.toISOString().split('T')[0];
+    }
+
+    const updated = { ...selectedLead, ...patch };
+    setSelectedLead(updated);
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+    try { await leadsService.update(selectedLead.id, patch); }
+    catch { setToast({ msg: 'Erro ao salvar data', type: 'err' }); }
+  };
+
+  const handleAddInteraction = async () => {
+    if (!selectedLead || !newInteractionText.trim()) return;
+    setSaving(true);
+    try {
+      const saved = await leadsService.addInteracao(selectedLead.id, {
+        data: HOJE_STR, texto: newInteractionText.trim(),
+        registrado_por: 'Admin', tipo: 'mensagem',
+      });
+      const updated = { ...selectedLead, interacoes: [...selectedLead.interacoes, saved] };
+      setSelectedLead(updated);
+      setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+      setNewInteractionText('');
+      setToast({ msg: 'Interação salva!', type: 'ok' });
+    } catch {
+      setToast({ msg: 'Erro ao salvar interação', type: 'err' });
+    } finally { setSaving(false); }
+  };
+
+  const handleCreateLead = async () => {
+    if (!newLeadForm.nome || !newLeadForm.instagram) return;
+    setSaving(true);
+    try {
+      const created = await leadsService.create({ ...newLeadForm, status: 'nao_abordado', data_1_contato: null, data_ult_contato: null, proximo_followup: null });
+      setLeads(prev => [created, ...prev]);
+      setIsNewLeadOpen(false);
+      setNewLeadForm({ nome: '', instagram: '', categoria: 'Nutricionista', cidade: '', classificacao: 'quente', responsavel: 'gustavo', observacoes: '' });
+      setToast({ msg: 'Lead criado com sucesso!', type: 'ok' });
+    } catch (e: any) {
+      setToast({ msg: e.message?.includes('unique') ? 'Instagram já cadastrado.' : 'Erro ao criar lead.', type: 'err' });
+    } finally { setSaving(false); }
+  };
+
+  const handleFileSelect = async (file: File) => {
+    setImportFile(file);
+    setImportResult(null);
+    try {
+      const preview = await leadsService.previewXLSX(file);
+      setImportPreview(preview);
+    } catch { setToast({ msg: 'Erro ao ler arquivo', type: 'err' }); }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const result = await leadsService.importFromXLSX(importFile, importResponsavel);
+      setImportResult(result);
+      if (result.importados > 0) {
+        const freshLeads = await leadsService.list();
+        setLeads(freshLeads.map(recalcularLeadStatus));
+      }
+      setToast({ msg: `${result.importados} leads importados! ${result.duplicados} duplicados ignorados.`, type: result.erros > 0 ? 'err' : 'ok' });
+    } catch { setToast({ msg: 'Erro ao importar', type: 'err' }); }
+    finally { setImporting(false); }
+  };

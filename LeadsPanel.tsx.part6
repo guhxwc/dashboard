@@ -1,0 +1,92 @@
+      {/* Lado Direito: Prioridades e Meta (agora rola junto com o conteúdo) */}
+      <div className="w-full xl:w-[380px] shrink-0 flex flex-col h-full">
+         <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col">
+           <div className="flex items-center gap-2 mb-6 shrink-0">
+             <AlertTriangle className="w-5 h-5 text-amber-500" />
+             <h3 className="font-semibold text-zinc-900 dark:text-white tracking-tight">Atenções & Prioridades</h3>
+           </div>
+
+           <div className="mb-6 bg-zinc-50 dark:bg-zinc-800/30 p-5 rounded-[20px] border border-zinc-100 dark:border-zinc-800/50 shrink-0">
+             <div className="flex justify-between items-end mb-2">
+               <span className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300">Meta diária de abordagens</span>
+               <span className="text-sm font-bold text-zinc-900 dark:text-white">{abordagensHoje} / {metaAbordagens}</span>
+             </div>
+             <div className="w-full h-2.5 bg-zinc-200 dark:bg-zinc-700/50 rounded-full overflow-hidden mt-3">
+               <div className={`h-full ${pbColor} transition-all`} style={{ width: `${pbWidth}%` }} />
+             </div>
+             {abordagensHoje < metaAbordagens ? (
+               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-3">
+                 Faltam <span className="text-zinc-700 dark:text-zinc-300 font-bold">{metaAbordagens - abordagensHoje} abordagens</span> para bater a meta.
+               </p>
+             ) : (
+               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-3">
+                 Meta do dia atingida! Parabéns!
+               </p>
+             )}
+           </div>
+
+           {followupsAtrasadosCount > 0 && (
+             <div className="mb-6 flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 rounded-[20px] border border-red-100 dark:border-red-500/20 shrink-0">
+               <div className="flex items-center gap-3">
+                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                 <span className="text-sm font-semibold tracking-tight text-red-900 dark:text-red-300">Follow-ups atrasados</span>
+               </div>
+               <span className="text-xl font-bold text-red-600 dark:text-red-400">{followupsAtrasadosCount}</span>
+             </div>
+           )}
+
+           <div className="flex-1 flex flex-col space-y-3 mb-6">
+             <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1 ml-1.5">Resolver Hoje</h4>
+             {prioridades.map(p => (
+               <div 
+                 key={p.lead.id} 
+                 onClick={() => setSelectedLead(p.lead)} 
+                 className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-800/20 rounded-[16px] border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 cursor-pointer transition-colors group shadow-sm dark:shadow-none shrink-0"
+               >
+                 <div className="flex items-center gap-3.5">
+                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getCategoriaClasses(p.lead.categoria)}`}>
+                     {p.lead.nome.charAt(0).toUpperCase()}
+                   </div>
+                   <div className="min-w-0">
+                     <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-none mb-1.5 truncate">{p.lead.nome}</p>
+                     <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-none truncate">{p.razao}</p>
+                   </div>
+                 </div>
+                 <ChevronRight className="w-4 h-4 shrink-0 text-zinc-300 group-hover:text-zinc-500 transition-colors ml-2" />
+               </div>
+             ))}
+             {prioridades.length === 0 && (
+               <div className="text-sm text-zinc-500 text-center py-6 shrink-0">
+                 Tudo em dia!
+               </div>
+             )}
+           </div>
+
+           <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
+             <div className="bg-zinc-50 dark:bg-zinc-800/20 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 mb-0.5">Status Geral</p>
+                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Fila organizada</p>
+                </div>
+                <Sparkles className="w-5 h-5 text-blue-500" />
+             </div>
+             <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center mt-4">
+               Atualizado em tempo real • CRM V0
+             </p>
+           </div>
+         </div>
+      </div>
+    </div>
+
+      {/* Floating Action Button for Mobile */}
+      <div className="lg:hidden fixed bottom-20 right-6 z-40">
+        <motion.button
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsNewLeadOpen(true)}
+          className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_8px_30px_rgb(37,99,235,0.4)] flex items-center justify-center"
+        >
+          <Plus className="w-8 h-8" />
+        </motion.button>
+      </div>

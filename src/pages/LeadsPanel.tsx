@@ -1,156 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Pagination } from '@/components/Pagination';
-
-type Lead = {
-  id: string;
-  nome: string;
-  instagram: string;
-  categoria: 'Nutricionista' | 'Usuário GLP-1' | 'Parceria Local';
-  cidade: string;
-  classificacao: 'quente' | 'morno' | 'frio';
-  responsavel: 'gustavo' | 'murilo' | 'lucas';
-  status: 'nao_abordado' | 'abordado' | 'em_conversa' | 'nao_quis';
-  data_1_contato: string | null;
-  data_ult_contato: string | null;
-  proximo_followup: string | null;
-  observacoes: string;
-  interacoes: Interacao[];
-};
-
-type Interacao = {
-  id: string;
-  data: string;
-  texto: string;
-  registrado_por: string;
-  tipo: 'mensagem' | 'fechado' | 'nao_quis';
-};
-
-const LEADS_MOCK: Lead[] = [
-  {
-    id: '1', nome: 'Vinicius Pacheco', instagram: '@nutri_viniciuspacheco', categoria: 'Nutricionista',
-    cidade: 'Maringá', classificacao: 'quente', responsavel: 'gustavo', status: 'nao_abordado',
-    data_1_contato: null, data_ult_contato: null, proximo_followup: null,
-    observacoes: 'Perfil muito forte na região.', interacoes: []
-  },
-  {
-    id: '2', nome: 'Jennifer Prioli', instagram: '@jennyprioli', categoria: 'Usuário GLP-1',
-    cidade: 'Brasil', classificacao: 'quente', responsavel: 'murilo', status: 'em_conversa',
-    data_1_contato: '2026-05-10', data_ult_contato: '2026-05-12', proximo_followup: '2026-05-15',
-    observacoes: '',
-    interacoes: [
-      { id: 'i1', data: '2026-05-10', texto: 'Abordagem inicial via DM.', registrado_por: 'Murilo', tipo: 'mensagem' },
-      { id: 'i2', data: '2026-05-12', texto: 'Respondeu interessada, pediu mais detalhes.', registrado_por: 'Murilo', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '3', nome: 'Jéssica Brazil', instagram: '@jessicabrazill', categoria: 'Usuário GLP-1',
-    cidade: 'Brasil', classificacao: 'quente', responsavel: 'murilo', status: 'nao_quis',
-    data_1_contato: '2026-05-09', data_ult_contato: '2026-05-11', proximo_followup: null,
-    observacoes: '',
-    interacoes: [
-      { id: 'i3', data: '2026-05-11', texto: 'Respondeu mas não quis no momento.', registrado_por: 'Murilo', tipo: 'nao_quis' }
-    ]
-  },
-  {
-    id: '4', nome: 'Magrass Maringá', instagram: '@magrass.maringa', categoria: 'Parceria Local',
-    cidade: 'Maringá', classificacao: 'quente', responsavel: 'gustavo', status: 'nao_abordado',
-    data_1_contato: null, data_ult_contato: null, proximo_followup: null,
-    observacoes: 'Grande potencial B2B', interacoes: []
-  },
-  {
-    id: '5', nome: 'Academia Top Fit', instagram: '@academiatopfitt', categoria: 'Parceria Local',
-    cidade: 'Maringá', classificacao: 'quente', responsavel: 'gustavo', status: 'em_conversa',
-    data_1_contato: '2026-05-01', data_ult_contato: '2026-05-08', proximo_followup: null,
-    observacoes: '',
-    interacoes: [
-      { id: 'i4', data: '2026-05-08', texto: 'Parceria assinada com sucesso!', registrado_por: 'Gustavo', tipo: 'fechado' }
-    ]
-  },
-  {
-    id: '6', nome: 'Dra. Viviane Bertoncelo', instagram: '@dravivianenutrologa', categoria: 'Nutricionista',
-    cidade: 'Maringá', classificacao: 'quente', responsavel: 'gustavo', status: 'abordado',
-    data_1_contato: '2026-05-11', data_ult_contato: '2026-05-11', proximo_followup: '2026-05-14',
-    observacoes: '',
-    interacoes: [
-      { id: 'i5', data: '2026-05-11', texto: 'Enviada mensagem inicial de apresentação.', registrado_por: 'Gustavo', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '7', nome: 'Laura Brasileiro', instagram: '@brasileiro.laura', categoria: 'Usuário GLP-1',
-    cidade: 'Uberlândia', classificacao: 'quente', responsavel: 'murilo', status: 'nao_abordado',
-    data_1_contato: null, data_ult_contato: null, proximo_followup: null,
-    observacoes: 'Perfil muito ativo sobre emagrecimento.', interacoes: []
-  },
-  {
-    id: '8', nome: 'Emagrecentro PR', instagram: '@emagrecentro_pr', categoria: 'Parceria Local',
-    cidade: 'Maringá', classificacao: 'quente', responsavel: 'gustavo', status: 'nao_abordado',
-    data_1_contato: null, data_ult_contato: null, proximo_followup: null,
-    observacoes: '', interacoes: []
-  },
-  {
-    id: '9', nome: 'Raquel Lo Turco', instagram: '@raquelloturco.nutri', categoria: 'Nutricionista',
-    cidade: 'Londrina', classificacao: 'quente', responsavel: 'gustavo', status: 'em_conversa',
-    data_1_contato: '2026-05-08', data_ult_contato: '2026-05-08', proximo_followup: '2026-05-11',
-    observacoes: '',
-    interacoes: [
-      { id: 'i6', data: '2026-05-08', texto: 'Apresentado produto.', registrado_por: 'Gustavo', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '10', nome: 'Dr. Lucas Mendes', instagram: '@lucasmendes.med', categoria: 'Nutricionista',
-    cidade: 'São Paulo', classificacao: 'morno', responsavel: 'lucas', status: 'abordado',
-    data_1_contato: '2026-05-13', data_ult_contato: '2026-05-13', proximo_followup: '2026-05-16',
-    observacoes: '',
-    interacoes: [
-      { id: 'i7', data: '2026-05-13', texto: 'Abordado hoje de manhã.', registrado_por: 'Lucas', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '11', nome: 'Carla Silva', instagram: '@carlamedidas', categoria: 'Usuário GLP-1',
-    cidade: 'Rio de Janeiro', classificacao: 'frio', responsavel: 'murilo', status: 'nao_quis',
-    data_1_contato: '2026-05-01', data_ult_contato: '2026-05-05', proximo_followup: null,
-    observacoes: '',
-    interacoes: [
-      { id: 'i8', data: '2026-05-01', texto: 'Mensagem inicial sem resposta', registrado_por: 'Murilo', tipo: 'mensagem' },
-      { id: 'i9', data: '2026-05-05', texto: 'Follow-up sem sucesso', registrado_por: 'Murilo', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '12', nome: 'Clínica Bem Estar', instagram: '@bemestarsaopaulo', categoria: 'Parceria Local',
-    cidade: 'São Paulo', classificacao: 'morno', responsavel: 'lucas', status: 'em_conversa',
-    data_1_contato: '2026-05-10', data_ult_contato: '2026-05-12', proximo_followup: '2026-05-14',
-    observacoes: 'Têm interesse, aguardando aprovação do gestor',
-    interacoes: [
-      { id: 'i10', data: '2026-05-12', texto: 'Reunião feita, gostaram do formato.', registrado_por: 'Lucas', tipo: 'mensagem' }
-    ]
-  },
-  {
-    id: '13', nome: 'João Pedro Fitness', instagram: '@joaofitness.glp1', categoria: 'Usuário GLP-1',
-    cidade: 'Curitiba', classificacao: 'quente', responsavel: 'murilo', status: 'em_conversa',
-    data_1_contato: '2026-05-05', data_ult_contato: '2026-05-10', proximo_followup: null,
-    observacoes: '',
-    interacoes: [
-      { id: 'i11', data: '2026-05-10', texto: 'Assinou o plano anual!', registrado_por: 'Murilo', tipo: 'fechado' }
-    ]
-  },
-  {
-    id: '14', nome: 'Nutri Paula', instagram: '@paulanutrioficial', categoria: 'Nutricionista',
-    cidade: 'Florianópolis', classificacao: 'quente', responsavel: 'gustavo', status: 'nao_abordado',
-    data_1_contato: null, data_ult_contato: null, proximo_followup: null,
-    observacoes: '', interacoes: []
-  },
-  {
-    id: '15', nome: 'Roberto Alves', instagram: '@roberto.emagrece', categoria: 'Usuário GLP-1',
-    cidade: 'Belo Horizonte', classificacao: 'morno', responsavel: 'murilo', status: 'abordado',
-    data_1_contato: '2026-05-13', data_ult_contato: '2026-05-13', proximo_followup: '2026-05-16',
-    observacoes: '',
-    interacoes: [
-      { id: 'i12', data: '2026-05-13', texto: 'Enviei Dm agora.', registrado_por: 'Murilo', tipo: 'mensagem' }
-    ]
-  }
-];
+import {
+  leadsService, recalcularLeadStatus,
+  type Lead, type Interacao, type ImportResult, type XLSXPreview,
+  type LeadCategoria, type LeadClassificacao, type LeadResponsavel, type LeadStatus
+} from '@/services/leadsService';
 
 const HOJE_STR = new Date().toISOString().split('T')[0];
 
@@ -192,8 +48,11 @@ function getStatusProps(s: string) {
 }
 
 export function LeadsPanel() {
-  const [leads, setLeads] = useState<Lead[]>(LEADS_MOCK);
-  
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+
   // Filters
   const [search, setSearch] = useState('');
   const [fCategoria, setFCategoria] = useState('');
@@ -204,8 +63,56 @@ export function LeadsPanel() {
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // New Interaction State
+  // New Interaction
   const [newInteractionText, setNewInteractionText] = useState('');
+
+  // New Lead form
+  const [newLeadForm, setNewLeadForm] = useState({
+    nome: '', instagram: '', categoria: 'Nutricionista' as LeadCategoria,
+    cidade: '', classificacao: 'quente' as LeadClassificacao,
+    responsavel: 'gustavo' as LeadResponsavel, observacoes: '',
+  });
+
+  // Import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<XLSXPreview | null>(null);
+  const [importResponsavel, setImportResponsavel] = useState<LeadResponsavel>('gustavo');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // ── Carregar leads do banco ──────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await leadsService.list();
+        if (!mounted) return;
+        const recalc = data.map(recalcularLeadStatus);
+        setLeads(recalc);
+        // Persiste mudanças automáticas de status no banco
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].status !== recalc[i].status || data[i].proximo_followup !== recalc[i].proximo_followup) {
+            leadsService.update(recalc[i].id, {
+              status: recalc[i].status,
+              proximo_followup: recalc[i].proximo_followup,
+            }).catch(() => {});
+          }
+        }
+      } catch (e: any) {
+        if (mounted) setToast({ msg: 'Erro ao carregar leads', type: 'err' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Agenda / Prioridades
   const dataDiffDays = (d1: string, d2: string) => {
@@ -232,10 +139,7 @@ export function LeadsPanel() {
         }
         if (!l.proximo_followup && l.data_ult_contato) {
           const diff = dataDiffDays(l.data_ult_contato, HOJE_STR);
-          if (diff > 3) {
-            pontuacao = 50 + diff;
-            razao = `Sem contato há ${Math.floor(diff)} dias`;
-          }
+          if (diff > 3) { pontuacao = 50 + diff; razao = `Sem contato há ${Math.floor(diff)} dias`; }
         }
         return { lead: l, pontuacao, razao };
       })
@@ -244,44 +148,22 @@ export function LeadsPanel() {
       .slice(0, 4);
   }, [leads]);
 
-  useEffect(() => {
-    setLeads(prev => {
-      let modified = false;
-      const updated = prev.map(l => {
-        if (l.proximo_followup && l.proximo_followup < HOJE_STR && (l.status === 'abordado' || l.status === 'em_conversa')) {
-          const diff = dataDiffDays(l.proximo_followup, HOJE_STR);
-          if (diff > 5) { // Só muda sozinho se passar de 5 dias
-            modified = true;
-            return { ...l, status: 'nao_quis' as const };
-          }
-        }
-        return l;
-      });
-      return modified ? updated : prev;
-    });
-  }, []);
-
   const filteredLeads = useMemo(() => {
     let result = leads.filter(l => {
-      const matchSearch = search === '' || 
-        l.nome.toLowerCase().includes(search.toLowerCase()) || 
-        l.instagram.toLowerCase().includes(search.toLowerCase()) || 
+      const matchSearch = search === '' ||
+        l.nome.toLowerCase().includes(search.toLowerCase()) ||
+        l.instagram.toLowerCase().includes(search.toLowerCase()) ||
         l.cidade.toLowerCase().includes(search.toLowerCase());
-      
-      const matchTab = 
+      const matchTab =
         activeTab === 'todos' ? true :
         activeTab === 'sem_contato' ? l.status === 'nao_abordado' :
         activeTab === 'ativos' ? (l.status === 'abordado' || l.status === 'em_conversa') :
-        activeTab === 'perdidos' ? l.status === 'nao_quis' : true;
-
+        activeTab === 'perdidos' ? (l.status === 'nao_quis' || l.status === 'sem_resposta') : true;
       const matchCat = fCategoria === '' || l.categoria === fCategoria;
-
       return matchSearch && matchTab && matchCat;
     });
-
-    const peso = { quente: 3, morno: 2, frio: 1 };
+    const peso: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
     result.sort((a, b) => peso[b.classificacao] - peso[a.classificacao]);
-
     return result;
   }, [leads, search, activeTab, fCategoria]);
 
@@ -289,74 +171,133 @@ export function LeadsPanel() {
   const totalLeads = leads.length;
   const quentes = leads.filter(l => l.classificacao === 'quente').length;
   const emConversa = leads.filter(l => l.status === 'em_conversa').length;
-  const fechados = leads.filter(l => l.status === 'em_conversa').length; // Changed logic conceptually as true 'fechado' wasn't requested
+  const fechados = leads.filter(l => l.status === 'fechado_assinante' || l.status === 'fechado_parceiro').length;
 
   const abordagensHoje = leads.filter(l => l.data_1_contato === HOJE_STR).length;
   const metaAbordagens = 5;
   const pbWidth = Math.min((abordagensHoje / metaAbordagens) * 100, 100);
   const pbColor = abordagensHoje >= 5 ? 'bg-emerald-500' : abordagensHoje >= 3 ? 'bg-yellow-500' : 'bg-red-500';
+  // ── Handlers integrados com o banco ─────────────────────────────────────
 
-  const handleStatusChange = (leadId: string, newStatus: Lead['status']) => {
+  const handleStatusChange = async (leadId: string, newStatus: Lead['status']) => {
+    // Optimistic update
     setLeads(prev => prev.map(l => {
-      if (l.id === leadId) {
-        const updated = { ...l, status: newStatus };
-        if (selectedLead?.id === leadId) setSelectedLead(updated);
-        return updated;
-      }
-      return l;
+      if (l.id !== leadId) return l;
+      const updated = { ...l, status: newStatus };
+      if (selectedLead?.id === leadId) setSelectedLead(updated);
+      return updated;
     }));
+    try {
+      await leadsService.update(leadId, { status: newStatus });
+      // Auto-interação de mudança de status
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        await leadsService.addInteracao(leadId, {
+          data: HOJE_STR, tipo: 'status_change',
+          texto: `Status alterado para "${getStatusProps(newStatus).label}"`,
+          registrado_por: 'Admin',
+        });
+        const interacoes = await leadsService.list().then(ls => ls.find(l => l.id === leadId)?.interacoes ?? []);
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, interacoes } : l));
+        if (selectedLead?.id === leadId) setSelectedLead(s => s ? { ...s, interacoes } : s);
+      }
+    } catch {
+      setToast({ msg: 'Erro ao atualizar status', type: 'err' });
+    }
   };
 
-  const handleDateChange = (type: 'data_1_contato' | 'data_ult_contato' | 'proximo_followup', value: string) => {
+  const handleDateChange = async (type: 'data_1_contato' | 'data_ult_contato' | 'proximo_followup', value: string) => {
     if (!selectedLead) return;
-    
-    setLeads(prev => prev.map(l => {
-      if (l.id === selectedLead.id) {
-        const updated = { ...l, [type]: value || null };
-        
-        // Se preencher data de 1 contato e for hoje, marca como abordado automaticamente para contar na meta
-        if (type === 'data_1_contato' && value === HOJE_STR && updated.status === 'nao_abordado') {
-          updated.status = 'abordado';
-        }
+    const patch: Partial<Lead> = { [type]: value || null };
 
-        if (type === 'data_ult_contato' && value) {
-          const ud = new Date(value + 'T12:00:00');
-          ud.setDate(ud.getDate() + 3);
-          updated.proximo_followup = ud.toISOString().split('T')[0];
-        }
+    if (type === 'data_1_contato' && value === HOJE_STR && selectedLead.status === 'nao_abordado') {
+      patch.status = 'abordado';
+    }
+    if (type === 'data_ult_contato' && value) {
+      const ud = new Date(value + 'T12:00:00');
+      ud.setDate(ud.getDate() + 3);
+      patch.proximo_followup = ud.toISOString().split('T')[0];
+    }
 
-        setSelectedLead(updated);
-        return updated;
-      }
-      return l;
-    }));
+    const updated = { ...selectedLead, ...patch };
+    setSelectedLead(updated);
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+    try { await leadsService.update(selectedLead.id, patch); }
+    catch { setToast({ msg: 'Erro ao salvar data', type: 'err' }); }
   };
 
-  const handleAddInteraction = () => {
+  const handleAddInteraction = async () => {
     if (!selectedLead || !newInteractionText.trim()) return;
-    
-    const newInteraction: Interacao = {
-      id: Date.now().toString(),
-      data: HOJE_STR,
-      texto: newInteractionText,
-      registrado_por: 'Admin',
-      tipo: 'mensagem'
-    };
-
-    setLeads(prev => prev.map(l => {
-      if (l.id === selectedLead.id) {
-        const updated = { ...l, interacoes: [...l.interacoes, newInteraction] };
-        setSelectedLead(updated);
-        return updated;
-      }
-      return l;
-    }));
-    
-    setNewInteractionText('');
+    setSaving(true);
+    try {
+      const saved = await leadsService.addInteracao(selectedLead.id, {
+        data: HOJE_STR, texto: newInteractionText.trim(),
+        registrado_por: 'Admin', tipo: 'mensagem',
+      });
+      const updated = { ...selectedLead, interacoes: [...selectedLead.interacoes, saved] };
+      setSelectedLead(updated);
+      setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+      setNewInteractionText('');
+      setToast({ msg: 'Interação salva!', type: 'ok' });
+    } catch {
+      setToast({ msg: 'Erro ao salvar interação', type: 'err' });
+    } finally { setSaving(false); }
   };
+
+  const handleCreateLead = async () => {
+    if (!newLeadForm.nome || !newLeadForm.instagram) return;
+    setSaving(true);
+    try {
+      const created = await leadsService.create({ ...newLeadForm, status: 'nao_abordado', data_1_contato: null, data_ult_contato: null, proximo_followup: null });
+      setLeads(prev => [created, ...prev]);
+      setIsNewLeadOpen(false);
+      setNewLeadForm({ nome: '', instagram: '', categoria: 'Nutricionista', cidade: '', classificacao: 'quente', responsavel: 'gustavo', observacoes: '' });
+      setToast({ msg: 'Lead criado com sucesso!', type: 'ok' });
+    } catch (e: any) {
+      setToast({ msg: e.message?.includes('unique') ? 'Instagram já cadastrado.' : 'Erro ao criar lead.', type: 'err' });
+    } finally { setSaving(false); }
+  };
+
+  const handleFileSelect = async (file: File) => {
+    setImportFile(file);
+    setImportResult(null);
+    try {
+      const preview = await leadsService.previewXLSX(file);
+      setImportPreview(preview);
+    } catch { setToast({ msg: 'Erro ao ler arquivo', type: 'err' }); }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const result = await leadsService.importFromXLSX(importFile, importResponsavel);
+      setImportResult(result);
+      if (result.importados > 0) {
+        const freshLeads = await leadsService.list();
+        setLeads(freshLeads.map(recalcularLeadStatus));
+      }
+      setToast({ msg: `${result.importados} leads importados! ${result.duplicados} duplicados ignorados.`, type: result.erros > 0 ? 'err' : 'ok' });
+    } catch { setToast({ msg: 'Erro ao importar', type: 'err' }); }
+    finally { setImporting(false); }
+  };
+  // Loading state
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-96 gap-3">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">Carregando leads...</span>
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
+      {/* TOAST */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
+          {toast.type === 'ok' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
+        </div>
+      )}
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -487,7 +428,6 @@ export function LeadsPanel() {
           </div>
         </div>
       </div>
-
       {/* LISTA / TABLE */}
       {/* Mobile Card View */}
       <div className="block lg:hidden space-y-4">
@@ -710,7 +650,6 @@ export function LeadsPanel() {
       </div>
       
       </div> {/* FECHA O LADO ESQUERDO AQUI */}
-
       {/* Lado Direito: Prioridades e Meta (agora rola junto com o conteúdo) */}
       <div className="w-full xl:w-[380px] shrink-0 flex flex-col h-full">
          <div className="bg-white dark:bg-[#121214] rounded-[24px] shadow-sm border border-zinc-100 dark:border-zinc-800/80 p-6 flex-1 flex flex-col">
@@ -803,7 +742,6 @@ export function LeadsPanel() {
           <Plus className="w-8 h-8" />
         </motion.button>
       </div>
-
       {/* MODAL DETALHES */}
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
@@ -941,7 +879,8 @@ export function LeadsPanel() {
                   className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white resize-none h-24 mb-3 transition-shadow"
                />
                <div className="flex justify-end pr-1">
-                  <button onClick={handleAddInteraction} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newInteractionText.trim()}>
+                  <button onClick={handleAddInteraction} disabled={!newInteractionText.trim() || saving} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                      Salvar Interação
                   </button>
                </div>
@@ -949,7 +888,6 @@ export function LeadsPanel() {
           </div>
         </div>
       )}
-
       {/* MODAL NOVO LEAD */}
       {isNewLeadOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 pb-0 h-[100dvh]">
@@ -960,48 +898,49 @@ export function LeadsPanel() {
              <div className="space-y-4">
                 <div>
                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nome*</label>
-                   <input type="text" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none" />
+                   <input type="text" value={newLeadForm.nome} onChange={e => setNewLeadForm(f => ({ ...f, nome: e.target.value }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-white" placeholder="Nome do lead" />
                 </div>
                 <div>
                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Instagram*</label>
-                   <input type="text" placeholder="@handle" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none" />
+                   <input type="text" value={newLeadForm.instagram} onChange={e => setNewLeadForm(f => ({ ...f, instagram: e.target.value }))} placeholder="@handle" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                    <div>
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Categoria*</label>
-                      <select className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none">
+                      <select value={newLeadForm.categoria} onChange={e => setNewLeadForm(f => ({ ...f, categoria: e.target.value as LeadCategoria }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white">
                          <option>Nutricionista</option><option>Usuário GLP-1</option><option>Parceria Local</option>
                       </select>
                    </div>
                    <div>
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Cidade</label>
-                      <input type="text" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none" />
+                      <input type="text" value={newLeadForm.cidade} onChange={e => setNewLeadForm(f => ({ ...f, cidade: e.target.value }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-white" />
                    </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                    <div>
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Classificação*</label>
-                      <select className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none">
-                         <option>🔥 Quente</option><option>🌡️ Morno</option><option>❄️ Frio</option>
+                      <select value={newLeadForm.classificacao} onChange={e => setNewLeadForm(f => ({ ...f, classificacao: e.target.value as LeadClassificacao }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white">
+                         <option value="quente">🔥 Quente</option><option value="morno">🌡️ Morno</option><option value="frio">❄️ Frio</option>
                       </select>
                    </div>
                    <div>
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Responsável*</label>
-                      <select className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none">
-                         <option>Gustavo</option><option>Murilo</option><option>Lucas</option>
+                      <select value={newLeadForm.responsavel} onChange={e => setNewLeadForm(f => ({ ...f, responsavel: e.target.value as LeadResponsavel }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white">
+                         <option value="gustavo">Gustavo</option><option value="murilo">Murilo</option><option value="lucas">Lucas</option><option value="nicolas">Nicolas</option>
                       </select>
                    </div>
                 </div>
                 <div>
                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Observação inicial</label>
-                   <textarea className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none resize-none h-16" />
+                   <textarea value={newLeadForm.observacoes} onChange={e => setNewLeadForm(f => ({ ...f, observacoes: e.target.value }))} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none resize-none h-16 text-zinc-900 dark:text-white" />
                 </div>
              </div>
              <div className="mt-6 flex justify-end gap-3">
                 <button onClick={() => setIsNewLeadOpen(false)} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2 text-sm font-medium">
                    Cancelar
                 </button>
-                <button onClick={() => setIsNewLeadOpen(false)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">
+                <button onClick={handleCreateLead} disabled={!newLeadForm.nome || !newLeadForm.instagram || saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                    Adicionar Lead
                 </button>
              </div>
@@ -1012,23 +951,103 @@ export function LeadsPanel() {
       {/* MODAL IMPORTAR */}
       {isImportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 h-[100dvh]">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsImportOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { if (!importing) { setIsImportOpen(false); setImportFile(null); setImportPreview(null); setImportResult(null); }}} />
+          <div className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 shadow-2xl rounded-t-[32px] sm:rounded-2xl p-6 pb-8 border border-zinc-200 dark:border-zinc-800 mt-auto sm:mt-0 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto">
              <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
-             <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">Importar Leads</h2>
-             
-             <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                   <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-white">Arraste o arquivo .xlsx aqui ou clique para selecionar</p>
-                <p className="text-xs text-zinc-500 mt-1">Aceita .xlsx e .csv</p>
-             </div>
+             <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Importar Leads</h2>
+             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Planilha com abas: <strong>Nutricionistas</strong>, <strong>Usuários GLP-1</strong>, <strong>Parcerias Locais</strong></p>
 
-             <div className="mt-6 flex justify-end gap-3">
-                <button onClick={() => setIsImportOpen(false)} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2 text-sm font-medium">
-                   Cancelar
+             {/* Resultado da importação */}
+             {importResult ? (
+               <div className={`rounded-xl p-4 mb-5 border ${importResult.erros > 0 ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'}`}>
+                 <div className="flex items-center gap-2 mb-2">
+                   <Check className={`w-5 h-5 ${importResult.erros > 0 ? 'text-rose-600' : 'text-emerald-600'}`} />
+                   <span className="font-semibold text-zinc-900 dark:text-white">Importação concluída</span>
+                 </div>
+                 <div className="text-sm space-y-1 text-zinc-700 dark:text-zinc-300">
+                   <p>✅ <strong>{importResult.importados}</strong> leads importados</p>
+                   <p>⚠️ <strong>{importResult.duplicados}</strong> duplicados ignorados</p>
+                   {importResult.erros > 0 && <p>❌ <strong>{importResult.erros}</strong> erros</p>}
+                 </div>
+               </div>
+             ) : (
+               <>
+                 {/* Drop area */}
+                 <div
+                   className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors mb-4 ${importFile ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                   onClick={() => fileInputRef.current?.click()}
+                   onDragOver={e => e.preventDefault()}
+                   onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); }}
+                 >
+                   <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                     onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
+                   <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                     <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                   </div>
+                   {importFile ? (
+                     <div>
+                       <p className="text-sm font-medium text-zinc-900 dark:text-white">{importFile.name}</p>
+                       {importPreview && (
+                         <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
+                           <p className="font-semibold text-blue-600 dark:text-blue-400">{importPreview.total} leads encontrados</p>
+                           {Object.entries(importPreview.abas).map(([aba, qtd]) => (
+                             <p key={aba}>• {aba}: {qtd}</p>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   ) : (
+                     <>
+                       <p className="text-sm font-medium text-zinc-900 dark:text-white">Arraste o arquivo .xlsx aqui ou clique</p>
+                       <p className="text-xs text-zinc-500 mt-1">Aceita .xlsx e .csv</p>
+                     </>
+                   )}
+                 </div>
+
+                 {/* Pré-visualização */}
+                 {importPreview && importPreview.exemplos.length > 0 && (
+                   <div className="mb-4">
+                     <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase mb-2">Pré-visualização</p>
+                     <div className="space-y-1">
+                       {importPreview.exemplos.map((e, i) => (
+                         <div key={i} className="flex items-center gap-2 text-xs bg-zinc-50 dark:bg-zinc-800 rounded-lg px-3 py-2">
+                           <span className="font-medium text-zinc-900 dark:text-white truncate">{e.nome}</span>
+                           <span className="text-zinc-400 shrink-0">{e.instagram}</span>
+                           <span className="ml-auto text-zinc-500 shrink-0">{e.categoria}</span>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Responsável padrão */}
+                 {importFile && (
+                   <div className="mb-4">
+                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Responsável padrão (para quem não tiver na planilha)</label>
+                     <select value={importResponsavel} onChange={e => setImportResponsavel(e.target.value as LeadResponsavel)}
+                       className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2 text-sm outline-none text-zinc-900 dark:text-white">
+                       <option value="gustavo">Gustavo</option>
+                       <option value="murilo">Murilo</option>
+                       <option value="lucas">Lucas</option>
+                       <option value="nicolas">Nicolas</option>
+                     </select>
+                   </div>
+                 )}
+               </>
+             )}
+
+             <div className="flex justify-end gap-3">
+                <button onClick={() => { setIsImportOpen(false); setImportFile(null); setImportPreview(null); setImportResult(null); }}
+                  disabled={importing}
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">
+                   {importResult ? 'Fechar' : 'Cancelar'}
                 </button>
+                {!importResult && (
+                  <button onClick={handleImport} disabled={!importFile || importing}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
+                     {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : `Importar ${importPreview?.total ?? ''} leads`}
+                  </button>
+                )}
              </div>
           </div>
         </div>

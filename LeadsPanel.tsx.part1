@@ -1,0 +1,82 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Pagination } from '@/components/Pagination';
+import {
+  leadsService, recalcularLeadStatus,
+  type Lead, type Interacao, type ImportResult, type XLSXPreview,
+  type LeadCategoria, type LeadClassificacao, type LeadResponsavel, type LeadStatus
+} from '@/services/leadsService';
+
+const HOJE_STR = new Date().toISOString().split('T')[0];
+
+function formatDataCurta(dateStr: string | null) {
+  if (!dateStr) return '—';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  return `${parts[2]} ${meses[parseInt(parts[1], 10) - 1]}`;
+}
+
+function getClassificacaoProps(c: string) {
+  if (c === 'quente') return { label: 'Quente', classes: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' };
+  if (c === 'morno') return { label: 'Morno', classes: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400' };
+  if (c === 'frio') return { label: 'Frio', classes: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' };
+  return { label: c, classes: '' };
+}
+
+function getResponsavelProps(r: string) {
+  if (r === 'gustavo') return { inicial: 'G', cor: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' };
+  if (r === 'murilo') return { inicial: 'M', cor: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' };
+  return { inicial: 'L', cor: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' };
+}
+
+function getCategoriaClasses(c: string) {
+  if (c === 'Nutricionista') return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300';
+  if (c === 'Usuário GLP-1') return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300';
+  return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300';
+}
+
+function getStatusProps(s: string) {
+  switch (s) {
+    case 'nao_abordado': return { label: 'Não abordado', classes: 'bg-zinc-50 text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50' };
+    case 'abordado': return { label: 'Abordado', classes: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20' };
+    case 'em_conversa': return { label: 'Em conversa', classes: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20' };
+    case 'nao_quis': return { label: 'Não quis', classes: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20' };
+    default: return { label: s, classes: 'bg-zinc-50 text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50' };
+  }
+}
+
+export function LeadsPanel() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [fCategoria, setFCategoria] = useState('');
+  const [activeTab, setActiveTab] = useState<'todos' | 'sem_contato' | 'ativos' | 'perdidos'>('todos');
+
+  // Modals/Drawers
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // New Interaction
+  const [newInteractionText, setNewInteractionText] = useState('');
+
+  // New Lead form
+  const [newLeadForm, setNewLeadForm] = useState({
+    nome: '', instagram: '', categoria: 'Nutricionista' as LeadCategoria,
+    cidade: '', classificacao: 'quente' as LeadClassificacao,
+    responsavel: 'gustavo' as LeadResponsavel, observacoes: '',
+  });
+
+  // Import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<XLSXPreview | null>(null);
+  const [importResponsavel, setImportResponsavel] = useState<LeadResponsavel>('gustavo');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
