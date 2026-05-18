@@ -15,6 +15,14 @@ import { LeadsPanel } from '@/pages/LeadsPanel';
 import { supabase } from '@/lib/supabase';
 import { supabaseService } from '@/services/supabaseService';
 
+const SUPER_ADMIN_EMAILS = [
+  'gustavo.500fyz@gmail.com',
+  'lucascauan2007@gmail.com',
+  'murilobarbosaguimaraes345@gmail.com',
+  'nicolasmelo520@gmail.com',
+  'lyanlucas770@gmail.com'
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [usersFilter, setUsersFilter] = useState('all');
@@ -23,29 +31,49 @@ function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        const adminStatus = await supabaseService.checkIsAdmin(session.user.id);
-        setIsAdmin(adminStatus);
-      } else {
+    const checkUserAccess = async (currentSession: any) => {
+      if (!currentSession) {
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      const email = currentSession.user?.email?.toLowerCase() || '';
+      if (SUPER_ADMIN_EMAILS.includes(email)) {
+        setIsAdmin(true);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Tenta verificar no banco com um timeout de 5 segundos
+        const adminCheckPromise = supabaseService.checkIsAdmin(currentSession.user.id);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+        
+        const adminStatus = await Promise.race([adminCheckPromise, timeoutPromise]) as boolean;
+        setIsAdmin(adminStatus);
+      } catch (error) {
+        console.warn('Erro ou timeout ao verificar admin, negando por segurança:', error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      checkUserAccess(session);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        const adminStatus = await supabaseService.checkIsAdmin(session.user.id);
-        setIsAdmin(adminStatus);
-      } else {
-        setIsAdmin(false);
-      }
+      checkUserAccess(session);
     });
 
     return () => subscription.unsubscribe();
@@ -111,17 +139,7 @@ function App() {
   }
 
   const userEmail = session?.user?.email?.toLowerCase() || '';
-  
-  // Lista de emails que sempre terão acesso (super admins/fundadores)
-  const superAdminEmails = [
-    'gustavo.500fyz@gmail.com',
-    'lucascauan2007@gmail.com',
-    'murilobarbosaguimaraes345@gmail.com',
-    'nicolasmelo520@gmail.com',
-    'lyanlucas770@gmail.com'
-  ];
-
-  const isSuperAdmin = superAdminEmails.includes(userEmail);
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(userEmail);
 
   if (!isAdmin && !isSuperAdmin && isAdmin !== null) {
     return (

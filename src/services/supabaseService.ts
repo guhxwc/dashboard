@@ -312,7 +312,9 @@ const realSupabaseService = {
     }
 
     const finalUsers = Array.from(allUsersMap.values());
+    if (finalUsers.length === 0) return [];
 
+    console.log('Mapping customers...');
     return finalUsers.map((p: any) => {
       const userId = p.id || p.user_id;
       
@@ -406,8 +408,6 @@ const realSupabaseService = {
         nutritionist_name: nutriName
       };
     }) as Customer[];
-
-    return [];
   },
 
   getDailyLogs: async (date: string) => {
