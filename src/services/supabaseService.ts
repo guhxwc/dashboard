@@ -984,6 +984,48 @@ const realSupabaseService = {
     return { success: true, message: `Usuário ${isTester ? 'marcado como' : 'removido de'} tester com sucesso.` };
   },
 
+  checkIsAdmin: async (userId: string): Promise<boolean> => {
+    try {
+      // 1. Tenta buscar na tabela profiles (assumindo que existe uma coluna is_admin)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin' as any)
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!error && data && (data as any).is_admin === true) {
+        return true;
+      }
+
+      // 2. Fallback: Verifica se o ID do usuário aparece como admin_id em logs de ações (proxy seguro)
+      const { data: logData, error: logError } = await supabase
+        .from('admin_actions_log' as any)
+        .select('id')
+        .eq('admin_id', userId)
+        .limit(1);
+
+      if (!logError && logData && logData.length > 0) {
+        return true;
+      }
+
+      // 3. Verifica se existe uma tabela específica de admins
+      const { data: adminTable, error: adminError } = await supabase
+        .from('admins' as any)
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!adminError && adminTable) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      console.warn("Erro ao verificar status de admin:", e);
+      return false;
+    }
+  },
+
   manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
     if (action === 'revoke') {
       const { data, error } = await supabase
@@ -1151,6 +1193,10 @@ export const supabaseService = {
       });
     }
     return realSupabaseService.manageUserTester(userId, isTester);
+  },
+  checkIsAdmin: async (userId: string): Promise<boolean> => {
+    if (isDemoMode()) return true; // In demo mode, everyone is admin for testing purposes
+    return realSupabaseService.checkIsAdmin(userId);
   },
   manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
     if (isDemoMode()) {

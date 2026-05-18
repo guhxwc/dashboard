@@ -13,25 +13,39 @@ import { Jarvis } from '@/pages/Jarvis';
 import { Login } from '@/pages/Login';
 import { LeadsPanel } from '@/pages/LeadsPanel';
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from '@/services/supabaseService';
 
 function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [usersFilter, setUsersFilter] = useState('all');
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        const adminStatus = await supabaseService.checkIsAdmin(session.user.id);
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      if (session) {
+        const adminStatus = await supabaseService.checkIsAdmin(session.user.id);
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -96,20 +110,25 @@ function App() {
     return <Login onLogin={() => {}} />;
   }
 
-  const allowedEmails = [
+  const userEmail = session?.user?.email?.toLowerCase() || '';
+  
+  // Lista de emails que sempre terão acesso (super admins/fundadores)
+  const superAdminEmails = [
     'gustavo.500fyz@gmail.com',
     'lucascauan2007@gmail.com',
-    'murilobarbosaguimaraes345@gmail.com'
+    'murilobarbosaguimaraes345@gmail.com',
+    'nicolasmelo520@gmail.com',
+    'lyanlucas770@gmail.com'
   ];
 
-  const userEmail = session?.user?.email?.toLowerCase() || '';
+  const isSuperAdmin = superAdminEmails.includes(userEmail);
 
-  if (!allowedEmails.includes(userEmail)) {
+  if (!isAdmin && !isSuperAdmin && isAdmin !== null) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-red-500">Acesso Negado</h1>
-          <p className="text-zinc-400">Você não tem permissão para acessar este painel.</p>
+          <p className="text-zinc-400">Você não tem permissão de administrador no banco de dados para acessar este painel.</p>
           <button 
             onClick={() => supabase.auth.signOut()}
             className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition-colors"

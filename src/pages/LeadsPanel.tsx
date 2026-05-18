@@ -296,7 +296,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
     if (!newLeadForm.nome || !newLeadForm.instagram) return;
     setSaving(true);
     try {
-      const created = await leadsService.create({ ...newLeadForm, status: 'nao_abordado', data_1_contato: null, data_ult_contato: null, proximo_followup: null });
+      const created = await leadsService.create({ ...newLeadForm, categoria: newLeadForm.categoria as LeadCategoria, status: 'nao_abordado', data_1_contato: null, data_ult_contato: null, proximo_followup: null });
       setLeads(prev => [created, ...prev]);
       setIsNewLeadOpen(false);
       setNewLeadForm({ nome: '', instagram: '', categoria: defaultCategory as LeadCategoria || 'Nutricionista', cidade: '', classificacao: 'quente', responsavel: defaultResponsavel, observacoes: '' });
@@ -376,7 +376,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       // Contagens
       abordagensNoPeriodo = leadsBase.filter(l => l.data_1_contato && l.data_1_contato >= inicioData && l.data_1_contato <= fimData).length;
       interacoesNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.filter(i => i.data >= inicioData && i.data <= fimData).length, 0);
-      fechamentosNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.filter(i => (i.tipo === 'fechado' || i.tipo === 'fechado_assinante' || i.tipo === 'fechado_parceiro' || l.status.startsWith('fechado')) && i.data >= inicioData && i.data <= fimData).length, 0);
+      fechamentosNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.filter(i => (i.tipo === 'fechado' || l.status.startsWith('fechado')) && i.data >= inicioData && i.data <= fimData).length, 0);
     } else {
       abordagensNoPeriodo = leadsBase.filter(l => l.data_1_contato).length;
       interacoesNoPeriodo = leadsBase.reduce((acc, l) => acc + l.interacoes.length, 0);
