@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check, Download } from 'lucide-react';
+import { Target, Search, Plus, Upload, MoreHorizontal, MessageSquare, CheckCircle, XCircle, X, ExternalLink, Calendar, Users, AlertCircle, AlertTriangle, ThermometerSun, Snowflake, Flame, ChevronRight, Sparkles, Loader2, Check, Download, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -251,6 +251,31 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       await leadsService.update(leadId, { responsavel: newResponsavel });
     } catch {
       setToast({ msg: 'Erro ao atualizar responsável', type: 'err' });
+    }
+  };
+
+  const handleResetLead = async () => {
+    if (!selectedLead) return;
+    
+    if (!window.confirm('Tem certeza que deseja redefinir o lead para o estado inicial? Isso apagará as datas e voltará o status para "Não Abordado".')) return;
+
+    const patch: Partial<Lead> = {
+      status: 'nao_abordado',
+      data_1_contato: null,
+      data_ult_contato: null,
+      proximo_followup: null,
+    };
+    
+    const updated = { ...selectedLead, ...patch };
+    setSelectedLead(updated);
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+    
+    try { 
+      await leadsService.update(selectedLead.id, patch);
+      setToast({ msg: 'Lead redefinido com sucesso.', type: 'ok' });
+    }
+    catch { 
+      setToast({ msg: 'Erro ao redefinir lead', type: 'err' }); 
     }
   };
 
@@ -1004,7 +1029,14 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
 
                 <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">1º Contato</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider">1º Contato</label>
+                      {selectedLead.data_1_contato && (
+                        <button onClick={() => handleDateChange('data_1_contato', '')} className="text-zinc-400 hover:text-rose-500 transition-colors" title="Limpar data">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                     <input 
                       type="date" 
                       value={selectedLead.data_1_contato || ''}
@@ -1013,7 +1045,14 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Último Contato</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider">Último Contato</label>
+                      {selectedLead.data_ult_contato && (
+                        <button onClick={() => handleDateChange('data_ult_contato', '')} className="text-zinc-400 hover:text-rose-500 transition-colors" title="Limpar data">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                     <input 
                       type="date" 
                       value={selectedLead.data_ult_contato || ''}
@@ -1022,7 +1061,14 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Próx. Follow-up</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider">Próx. Follow-up</label>
+                      {selectedLead.proximo_followup && (
+                        <button onClick={() => handleDateChange('proximo_followup', '')} className="text-zinc-400 hover:text-rose-500 transition-colors" title="Limpar data">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                     <input 
                       type="date" 
                       value={selectedLead.proximo_followup || ''}
@@ -1030,6 +1076,16 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                       className="w-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-shadow"
                     />
                   </div>
+                </div>
+                
+                <div className="pt-6 mt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <button 
+                    onClick={handleResetLead} 
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-rose-600 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors border border-rose-200 dark:border-rose-500/20"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Redefinir Lead
+                  </button>
                 </div>
               </div>
 
