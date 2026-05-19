@@ -274,6 +274,19 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
     catch { setToast({ msg: 'Erro ao salvar data', type: 'err' }); }
   };
 
+  const handleObservacoesChange = (value: string) => {
+    if (!selectedLead) return;
+    const updated = { ...selectedLead, observacoes: value };
+    setSelectedLead(updated);
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l));
+  };
+
+  const handleObservacoesBlur = async () => {
+    if (!selectedLead) return;
+    try { await leadsService.update(selectedLead.id, { observacoes: selectedLead.observacoes }); }
+    catch { setToast({ msg: 'Erro ao salvar observações', type: 'err' }); }
+  };
+
   const handleAddInteraction = async () => {
     if (!selectedLead || !newInteractionText.trim()) return;
     setSaving(true);
@@ -455,7 +468,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
   );
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden">
+    <div className="space-y-6 max-w-full">
       {/* TOAST */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
@@ -501,7 +514,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
       <div className="flex flex-col xl:flex-row gap-6 mb-8 items-start w-full">
         
         {/* LADO ESQUERDO: Greeting + Cards + Filters + Table */}
-        <div className="flex-1 flex flex-col space-y-6 min-w-0 w-full overflow-hidden">
+        <div className="flex-1 flex flex-col space-y-6 min-w-0 w-full">
 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
@@ -693,8 +706,8 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
 
       {/* Desktop Table View */}
       <div className="hidden lg:block bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1200px]">
+        <div className="overflow-x-auto pb-4 custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
                 <th className="px-4 py-3 font-medium">Lead</th>
@@ -705,7 +718,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">1º Contato</th>
                 <th className="px-4 py-3 font-medium">Follow-up</th>
-                <th className="px-4 py-3 font-medium">Observação Rápida</th>
+                <th className="px-4 py-3 font-medium max-w-[250px]">Obs.</th>
                 <th className="px-4 py-3 font-medium text-center">Ações</th>
               </tr>
             </thead>
@@ -781,7 +794,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                         <span className="text-zinc-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-500" title={obsRapida}>
+                    <td className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-[250px] truncate" title={obsRapida}>
                       {obsTruncada}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -957,7 +970,7 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
             </div>
 
             {/* Content Scroll */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8 pb-8 sm:pb-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8 pb-8 sm:pb-6">
               
               {/* Infos Sidebar */}
               <div className="w-full md:w-64 space-y-4 sm:space-y-5 shrink-0">
@@ -1046,6 +1059,19 @@ export function LeadsPanel({ session }: { session?: any } = {}) {
                       </div>
                     ))
                   )}
+                </div>
+
+                {/* Observações Gerais */}
+                <div className="pt-6 mt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <h3 className="font-semibold text-lg text-zinc-900 dark:text-white mb-3">Observações Gerais</h3>
+                  <textarea 
+                    value={selectedLead.observacoes || ''}
+                    onChange={e => handleObservacoesChange(e.target.value)}
+                    onBlur={handleObservacoesBlur}
+                    placeholder="Ex: toma ozempic, usa ativamente..."
+                    className="w-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white outline-none text-zinc-900 dark:text-white resize-y min-h-[120px] transition-shadow shadow-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-2">As observações são salvas automaticamente ao sair do campo.</p>
                 </div>
               </div>
 
