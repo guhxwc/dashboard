@@ -3,7 +3,7 @@ import { mockService } from '@/services/mockData';
 import { supabaseService, isDemoMode } from '@/services/supabaseService';
 import { Customer, Affiliate, Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown, DollarSign, Users } from 'lucide-react';
+import { Search, Filter, UserCheck, UserX, Clock, Database, Download, X, Calendar, CreditCard, Activity, ShieldCheck, ShieldOff, ShieldAlert, MoreHorizontal, FlaskConical, Scale, Target, TrendingDown, DollarSign, Users, Check } from 'lucide-react';
 import { subDays, isAfter, differenceInDays } from 'date-fns';
 import { Pagination } from '@/components/Pagination';
 import { SkeletonCard } from '@/components/SkeletonCard';
@@ -30,7 +30,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
   // Pro Management State
   const [proAction, setProAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string; stripeId?: string } | null>(null);
   const [testerAction, setTesterAction] = useState<{ userId: string; isTester: boolean; name: string } | null>(null);
-  const [consultancyAction, setConsultancyAction] = useState<{ userId: string; action: 'revoke'; name: string } | null>(null);
+  const [consultancyAction, setConsultancyAction] = useState<{ userId: string; action: 'grant' | 'revoke'; name: string } | null>(null);
   const [proReason, setProReason] = useState('');
   const [proLoading, setProLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -1174,13 +1174,21 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                       Remover de Tester
                     </button>
                   )}
-                  {selectedCustomer.is_consultancy && (
+                  {selectedCustomer.is_consultancy ? (
                     <button
                       onClick={() => setConsultancyAction({ userId: selectedCustomer.id, action: 'revoke', name: selectedCustomer.name })}
                       className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors text-sm font-medium"
                     >
                       <X className="w-4 h-4" />
                       Revogar Consultoria
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setConsultancyAction({ userId: selectedCustomer.id, action: 'grant', name: selectedCustomer.name })}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <Check className="w-4 h-4" />
+                      Conceder Consultoria
                     </button>
                   )}
                 </div>
@@ -1312,16 +1320,19 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-rose-100 text-rose-600`}>
-                  <X className="w-6 h-6" />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${consultancyAction.action === 'grant' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                  {consultancyAction.action === 'grant' ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
                 </div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  Revogar Consultoria
+                  {consultancyAction.action === 'grant' ? 'Conceder Consultoria' : 'Revogar Consultoria'}
                 </h3>
               </div>
               
               <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                Você está prestes a revogar a consultoria do usuário <strong>{consultancyAction.name}</strong>. Esta ação não pode ser desfeita e ele perderá o acesso e comunicação com a nutri.
+                {consultancyAction.action === 'grant' 
+                  ? <>Você está prestes a conceder o <strong>Plano Mensal de Consultoria</strong> para o usuário <strong>{consultancyAction.name}</strong>. Ele terá acesso total às funcionalidades da nutri.</>
+                  : <>Você está prestes a revogar a consultoria do usuário <strong>{consultancyAction.name}</strong>. Esta ação não pode ser desfeita e ele perderá o acesso e comunicação com a nutri.</>
+                }
               </p>
 
               <div className="flex gap-3">
@@ -1335,7 +1346,7 @@ export function UsersPage({ initialStatus = 'all', onTabChange }: { initialStatu
                 <button
                   onClick={handleManageConsultancy}
                   disabled={proLoading}
-                  className={`flex-1 px-4 py-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50`}
+                  className={`flex-1 px-4 py-2 text-white ${consultancyAction.action === 'grant' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'} rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50`}
                 >
                   {proLoading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

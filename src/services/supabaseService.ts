@@ -1026,7 +1026,51 @@ const realSupabaseService = {
     }
   },
 
-  manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
+  manageUserConsultancy: async (userId: string, action: 'grant' | 'revoke'): Promise<{ success: boolean; message: string }> => {
+    if (action === 'grant') {
+      const now = new Date().toISOString();
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      
+      const { data: existing, error: checkError } = await supabase
+        .from('consultations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (checkError) {
+        return { success: false, message: checkError.message };
+      }
+
+      const consultancyData = {
+        user_id: userId,
+        status: 'active',
+        subscription_status: 'active',
+        plan_type: 'monthly',
+        started_at: now,
+        next_review_at: nextMonth.toISOString(),
+        updated_at: now
+      };
+
+      if (existing && existing.length > 0) {
+        const { error } = await supabase
+          .from('consultations')
+          .update(consultancyData)
+          .eq('id', existing[0].id);
+
+        if (error) return { success: false, message: error.message };
+      } else {
+        const { error } = await supabase
+          .from('consultations')
+          .insert([{ ...consultancyData, created_at: now }]);
+
+        if (error) return { success: false, message: error.message };
+      }
+
+      return { success: true, message: 'Consultoria (plano mensal) concedida com sucesso.' };
+    }
+
     if (action === 'revoke') {
       const { data, error } = await supabase
         .from('consultations')
@@ -1198,11 +1242,11 @@ export const supabaseService = {
     if (isDemoMode()) return true; // In demo mode, everyone is admin for testing purposes
     return realSupabaseService.checkIsAdmin(userId);
   },
-  manageUserConsultancy: async (userId: string, action: 'revoke'): Promise<{ success: boolean; message: string }> => {
+  manageUserConsultancy: async (userId: string, action: 'grant' | 'revoke'): Promise<{ success: boolean; message: string }> => {
     if (isDemoMode()) {
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve({ success: true, message: `[DEMO] Consultoria revogada com sucesso.` });
+          resolve({ success: true, message: `[DEMO] Consultoria ${action === 'grant' ? 'concedida' : 'revogada'} com sucesso.` });
         }, 1000);
       });
     }
