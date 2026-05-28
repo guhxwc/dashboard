@@ -401,7 +401,7 @@ const realSupabaseService = {
         subscription_end_date: p.subscription_end_date || p.pro_expires_at,
         is_manual_pro: p.is_pro === true,
         pro_granted_at: p.pro_granted_at,
-        is_consultancy: !!consultRecord,
+        is_consultancy: !!consultRecord && consultRecord.subscription_status !== 'canceled',
         consultancy_plan: consultRecord?.plan_type,
         consultancy_status: consultRecord?.subscription_status,
         nutritionist_id: consultRecord?.nutritionist_id,
